@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+
+@theme {
+  /* This is the line that has been changed to make the background red */
+  --color-background: #000030;      /* A deep red shade */
+  
+  --color-primary: #1e293b;        /* slate-800 (Cards will keep their dark color) */
+  --color-border: #334155;        /* slate-700 */
+  --color-border-dark: #1e293b;    /* slate-800 for darker borders */
+
+  --color-accent: #22d3ee;        /* cyan-400 */
+  --color-accent-dark: #06b6d4;      /* cyan-500 */
+
+  --color-text-primary: #f8fafc;   /* slate-50 */
+  --color-text-secondary: #94a3b8;  /* slate-400 */
+
+  --color-priority-high: #ef4444;   /* red-500 */
+  --color-priority-medium: #f97316; /* orange-500 */
+  --color-priority-low: #22c55e;    /* green-500 */
+
+  --font-sans: Inter, sans-serif;
+
+  @keyframes spin-slow {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  --animate-spin-slow: spin-slow 15s linear infinite;
+}
+
+/* Base styles for the body tag */
+body {
+  @apply bg-background font-sans text-text-secondary;
+}
