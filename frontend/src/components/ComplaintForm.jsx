@@ -38,17 +38,17 @@ const mapOptions = {
   ],
 };
 
-const categories = [
-    'Water Supply & Sewage',
-    'Roads & Potholes',
-    'Waste Management',
-    'Streetlights & Electricity',
-    'Public Health & Sanitation',
-    'Illegal Construction & Encroachment',
-    'Other'
-];
+// Data structure for category-specific issue titles
+const issueTitlesByCategory = {
+  'Water Supply & Sewage': ['Leaking Pipe', 'No Water Supply', 'Contaminated Water', 'Blocked Sewer Line', 'Overflowing Manhole'],
+  'Roads & Potholes': ['Pothole Repair Request', 'Damaged Footpath/Sidewalk', 'Broken Speed Breaker', 'Faded Road Markings', 'Waterlogging on Road'],
+  'Waste Management': ['Garbage Not Collected', 'Overflowing Public Dustbin', 'Street Sweeping Required', 'Dead Animal Removal', 'Illegal Dumping of Waste'],
+  'Streetlights & Electricity': ['Streetlight Not Working', 'Exposed Electrical Wires', 'Damaged Electricity Pole', 'Frequent Power Cuts', 'Lights On During Daytime'],
+  'Public Health & Sanitation': ['Mosquito Fogging Required', 'Unsanitary Public Toilet', 'Stagnant Water Accumulation', 'Need for Public Urinal'],
+  'Illegal Construction & Encroachment': ['Encroachment on Footpath/Road', 'Illegal Construction Activity', 'Unauthorized Banner/Hoarding'],
+};
 
-// Define libraries for Google Maps API
+const categories = Object.keys(issueTitlesByCategory).concat('Other');
 const libraries = ['places'];
 
 const ComplaintForm = ({ onComplaintSubmitted }) => {
@@ -63,9 +63,8 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
-    
-    // State for the Autocomplete instance
     const [autocomplete, setAutocomplete] = useState(null);
+    const [showCustomTitleInput, setShowCustomTitleInput] = useState(false);
 
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -74,7 +73,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-        libraries, // Load the places library
+        libraries,
     });
 
     useEffect(() => {
@@ -83,21 +82,22 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                 const { latitude, longitude } = position.coords;
                 const currentLocation = { lat: latitude, lng: longitude };
                 setMapCenter(currentLocation);
-                // Set the initial marker to the user's live location
                 setMarkerPosition(currentLocation); 
             },
             () => console.warn('Location access denied.')
         );
     }, []);
 
+    // When category changes, reset the title and custom input visibility
+    useEffect(() => {
+        setTitle('');
+        setShowCustomTitleInput(category === 'Other');
+    }, [category]);
+
     const handleMapClick = useCallback((e) => {
-        setMarkerPosition({
-            lat: e.latLng.lat(),
-            lng: e.latLng.lng(),
-        });
+        setMarkerPosition({ lat: e.latLng.lat(), lng: e.latLng.lng() });
     }, []);
     
-    // Handlers for the Autocomplete component
     const onLoad = (autoC) => setAutocomplete(autoC);
 
     const onPlaceChanged = () => {
@@ -109,8 +109,17 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                 setMapCenter(newCenter);
                 setMarkerPosition(newCenter);
             }
+        }
+    };
+    
+    const handleTitleSelectChange = (e) => {
+        const value = e.target.value;
+        if (value === '__OTHER__') {
+            setShowCustomTitleInput(true);
+            setTitle(''); // Clear title to allow custom input
         } else {
-            console.log('Autocomplete is not loaded yet!');
+            setShowCustomTitleInput(false);
+            setTitle(value);
         }
     };
 
@@ -137,7 +146,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
             setIsRecording(false);
         }
     };
-    
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -209,19 +218,23 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                 
                 {isLoaded && (
                     <div className="relative mb-4">
-                        <div className="absolute top-3 left-3 z-10">
-                             <Search className="text-text-secondary" />
+                        <label htmlFor="location-search" className="block text-sm font-medium text-text-secondary mb-2">Search Location</label>
+                        <div className="relative">
+                            <div className="absolute top-3 left-3 z-10">
+                                 <Search className="text-text-secondary" />
+                            </div>
+                            <Autocomplete
+                                onLoad={onLoad}
+                                onPlaceChanged={onPlaceChanged}
+                            >
+                                <input
+                                    id="location-search"
+                                    type="text"
+                                    placeholder="Search for a location..."
+                                    className="w-full bg-background border border-border rounded-md py-3 pl-12 pr-4 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow"
+                                />
+                            </Autocomplete>
                         </div>
-                        <Autocomplete
-                            onLoad={onLoad}
-                            onPlaceChanged={onPlaceChanged}
-                        >
-                            <input
-                                type="text"
-                                placeholder="Search for a location..."
-                                className="w-full bg-background border border-border rounded-md py-3 pl-12 pr-4 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow"
-                            />
-                        </Autocomplete>
                     </div>
                 )}
 
@@ -249,12 +262,43 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                     <h3 className="text-lg font-semibold text-text-primary">Provide Details</h3>
                     <p className="text-text-secondary text-sm">Describe the issue and select a category.</p>
                     <div className="mt-4 space-y-4">
-                        <select value={category} onChange={(e) => setCategory(e.target.value)} required className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow">
-                            <option value="" disabled>-- Select a Category --</option>
-                            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Issue Title (e.g., Large Pothole)" required className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" />
-                        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detailed description of the problem..." required rows="4" className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" />
+                        <div>
+                            <label htmlFor="category-select" className="block text-sm font-medium text-text-secondary mb-2">Issue Category</label>
+                            <select id="category-select" value={category} onChange={(e) => setCategory(e.target.value)} required className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow">
+                                <option value="" disabled>-- Select a Category --</option>
+                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label htmlFor="title-select" className="block text-sm font-medium text-text-secondary mb-2">Issue Title</label>
+                            <select 
+                                id="title-select"
+                                value={showCustomTitleInput ? '__OTHER__' : title} 
+                                onChange={handleTitleSelectChange} 
+                                required 
+                                disabled={!category || category === 'Other'}
+                                className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <option value="" disabled>{!category ? 'Select a category first' : '-- Select an Issue Title --'}</option>
+                                {category && issueTitlesByCategory[category]?.map(issueTitle => (
+                                    <option key={issueTitle} value={issueTitle}>{issueTitle}</option>
+                                ))}
+                                {category && category !== 'Other' && <option value="__OTHER__">Other (please specify)</option>}
+                            </select>
+                        </div>
+                        
+                        {showCustomTitleInput && (
+                            <div>
+                                <label htmlFor="custom-title-input" className="block text-sm font-medium text-text-secondary mb-2">Custom Issue Title</label>
+                                <input id="custom-title-input" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Please specify the issue title" required className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" />
+                            </div>
+                        )}
+                        
+                        <div>
+                            <label htmlFor="description-textarea" className="block text-sm font-medium text-text-secondary mb-2">Detailed Description</label>
+                            <textarea id="description-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide as much detail as possible..." required rows="4" className="w-full bg-background border border-border rounded-md p-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -268,33 +312,39 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                     <h3 className="text-lg font-semibold text-text-primary">Upload Evidence</h3>
                     <p className="text-text-secondary text-sm">An image is required. You can also record a voice note.</p>
                     <div className="mt-4 space-y-4">
-                        {!imagePreview ? (
-                            <input ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" required className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-border file:text-text-primary hover:file:bg-accent hover:file:text-background transition-colors" />
-                        ) : (
-                            <div className="relative w-full max-w-xs">
-                                <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover" />
-                                <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-background/50 text-white rounded-full p-1 hover:bg-background transition-colors">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        )}
-                        
-                        <div className="flex items-center gap-4">
-                            {!audioBlob && (
-                                <button type="button" onClick={handleMicClick} className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-priority-high/20 text-priority-high animate-pulse' : 'bg-border text-accent hover:bg-accent hover:text-background'}`}>
-                                    {isRecording ? <StopCircle /> : <Mic />}
-                                </button>
+                        <div>
+                            <label htmlFor="image-input" className="block text-sm font-medium text-text-secondary mb-2">Upload Image*</label>
+                            {!imagePreview ? (
+                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" required className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-border file:text-text-primary hover:file:bg-accent hover:file:text-background transition-colors" />
+                            ) : (
+                                <div className="relative w-full max-w-xs">
+                                    <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover" />
+                                    <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-background/50 text-white rounded-full p-1 hover:bg-background transition-colors">
+                                        <X size={16} />
+                                    </button>
+                                </div>
                             )}
-                            <div className="flex-grow">
-                                {isRecording && <p className="text-sm text-priority-high animate-pulse">Recording audio...</p>}
-                                {audioBlob && !isRecording && (
-                                    <div className="flex items-center gap-2">
-                                        <audio src={URL.createObjectURL(audioBlob)} controls className="w-full max-w-xs h-10" />
-                                        <button type="button" onClick={handleRemoveAudio} className="text-text-secondary hover:text-priority-high transition-colors">
-                                            <X size={20} />
-                                        </button>
-                                    </div>
+                        </div>
+                        
+                        <div>
+                           <label className="block text-sm font-medium text-text-secondary mb-2">Record Voice Note (Optional)</label>
+                            <div className="flex items-center gap-4">
+                                {!audioBlob && (
+                                    <button type="button" onClick={handleMicClick} className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-priority-high/20 text-priority-high animate-pulse' : 'bg-border text-accent hover:bg-accent hover:text-background'}`}>
+                                        {isRecording ? <StopCircle /> : <Mic />}
+                                    </button>
                                 )}
+                                <div className="flex-grow">
+                                    {isRecording && <p className="text-sm text-priority-high animate-pulse">Recording audio...</p>}
+                                    {audioBlob && !isRecording && (
+                                        <div className="flex items-center gap-2">
+                                            <audio src={URL.createObjectURL(audioBlob)} controls className="w-full max-w-xs h-10" />
+                                            <button type="button" onClick={handleRemoveAudio} className="text-text-secondary hover:text-priority-high transition-colors">
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
