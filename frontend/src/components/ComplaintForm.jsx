@@ -211,7 +211,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                         <MapPin className="text-accent" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-text-primary">Pinpoint the Location AYUSH JAISWAL</h3>
+                        <h3 className="text-lg font-semibold text-text-primary">Pinpoint the Location</h3>
                         <p className="text-text-secondary text-sm">Search for a place or click on the map to place a pin.</p>
                     </div>
                 </div>
