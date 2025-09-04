@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api/api';
 import MapView from './MapView.jsx';
 import ComplaintList from './ComplaintList.jsx';
-import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List, Loader } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List, Loader, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
-// A dedicated skeleton loader for the dashboard for a better UX
+// A dedicated skeleton loader for the dashboard
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
     <div className="h-44 bg-primary rounded-lg"></div>
@@ -58,13 +58,13 @@ const SuperadminDashboard = () => {
       );
     }
     
-    // Calculate stats for the header and chart
+    // --- Data Processing for Analytics ---
     const totalComplaints = complaints.length;
     const pendingCount = complaints.filter(c => c.status === 'pending').length;
     const underConsiderationCount = complaints.filter(c => c.status === 'under consideration').length;
     const resolvedCount = complaints.filter(c => c.status === 'resolved').length;
 
-    // New data processing for the grouped bar chart
+    // Data for Grouped Bar Chart
     const departmentData = complaints.reduce((acc, complaint) => {
         const dept = complaint.category;
         if (!acc[dept]) {
@@ -73,15 +73,21 @@ const SuperadminDashboard = () => {
         acc[dept][complaint.status]++;
         return acc;
     }, {});
-
-    const chartData = Object.keys(departmentData).map(dept => ({
-        name: dept.split(' ')[0], // Shorten name for chart labels
+    const barChartData = Object.keys(departmentData).map(dept => ({
+        name: dept.split(' ')[0],
         fullName: dept,
         Pending: departmentData[dept].pending,
         'In Progress': departmentData[dept]['under consideration'],
         Resolved: departmentData[dept].resolved,
     })).sort((a, b) => (b.Pending + b['In Progress'] + b.Resolved) - (a.Pending + a['In Progress'] + a.Resolved));
 
+    // Data for Pie Chart
+    const priorityData = [
+        { name: 'High', value: complaints.filter(c => c.priority === 'High').length },
+        { name: 'Medium', value: complaints.filter(c => c.priority === 'Medium').length },
+        { name: 'Low', value: complaints.filter(c => c.priority === 'Low').length },
+    ];
+    const PRIORITY_COLORS = ['var(--color-priority-high)', 'var(--color-priority-medium)', 'var(--color-priority-low)'];
 
     return (
       <div className="space-y-8">
@@ -118,33 +124,57 @@ const SuperadminDashboard = () => {
           </div>
         </div>
 
-        {/* Department Analytics Card */}
-        <div className="bg-primary border border-border rounded-lg p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-                <BarChart2 className="text-accent" size={24} />
-                <h2 className="text-xl font-semibold text-text-primary">Departmental Workload</h2>
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-3 bg-primary border border-border rounded-lg p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <BarChart2 className="text-accent" size={24} />
+                    <h2 className="text-xl font-semibold text-text-primary">Departmental Workload</h2>
+                </div>
+                <div className="w-full h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={barChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                            <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)' }} tickLine={{ stroke: 'var(--color-text-secondary)' }} />
+                            <YAxis tick={{ fill: 'var(--color-text-secondary)' }} tickLine={{ stroke: 'var(--color-text-secondary)' }} />
+                            <Tooltip 
+                                cursor={{fill: 'var(--color-border)'}} 
+                                contentStyle={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)'}} 
+                                itemStyle={{ color: 'var(--color-text-primary)' }}
+                                labelStyle={{ color: 'var(--color-text-secondary)' }}
+                                labelFormatter={(value) => barChartData.find(d => d.name === value)?.fullName} 
+                            />
+                            <Legend wrapperStyle={{ color: 'var(--color-text-secondary)' }} />
+                            <Bar dataKey="Pending" fill="var(--color-priority-high)" />
+                            <Bar dataKey="In Progress" fill="var(--color-priority-medium)" />
+                            <Bar dataKey="Resolved" fill="var(--color-priority-low)" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
-            <div className="w-full h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                        <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)' }} tickLine={{ stroke: 'var(--color-text-secondary)' }} />
-                        <YAxis tick={{ fill: 'var(--color-text-secondary)' }} tickLine={{ stroke: 'var(--color-text-secondary)' }} />
-                        <Tooltip 
-                            cursor={{fill: 'var(--color-border)'}}
-                            contentStyle={{ 
-                                backgroundColor: 'var(--color-background)', 
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-primary)'
-                            }}
-                            labelFormatter={(value) => chartData.find(d => d.name === value)?.fullName}
-                        />
-                        <Legend wrapperStyle={{ color: 'var(--color-text-secondary)' }} />
-                        <Bar dataKey="Pending" fill="var(--color-priority-high)" />
-                        <Bar dataKey="In Progress" fill="var(--color-priority-medium)" />
-                        <Bar dataKey="Resolved" fill="var(--color-priority-low)" />
-                    </BarChart>
-                </ResponsiveContainer>
+            <div className="lg:col-span-2 bg-primary border border-border rounded-lg p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <PieChartIcon className="text-accent" size={24} />
+                    <h2 className="text-xl font-semibold text-text-primary">Priority Breakdown</h2>
+                </div>
+                <div className="w-full h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={priorityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                                {priorityData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[index % PRIORITY_COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip 
+                                cursor={{fill: 'var(--color-border)'}} 
+                                contentStyle={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)'}} 
+                                itemStyle={{ color: 'var(--color-text-primary)' }}
+                                labelStyle={{ color: 'var(--color-text-secondary)' }}
+                            />
+                            <Legend wrapperStyle={{ color: 'var(--color-text-secondary)' }} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
         </div>
 
@@ -152,10 +182,10 @@ const SuperadminDashboard = () => {
         <div className="bg-primary border border-border rounded-lg p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
                 <MapPin className="text-accent" size={24} />
-                <h2 className="text-xl font-semibold text-text-primary">Report Locations</h2>
+                <h2 className="text-xl font-semibold text-text-primary">Report Locations by Department</h2>
             </div>
             <div className="h-96 md:h-[500px] w-full rounded-md overflow-hidden">
-                <MapView complaints={complaints} />
+                <MapView complaints={complaints} colorBy="category" />
             </div>
         </div>
         
@@ -172,4 +202,3 @@ const SuperadminDashboard = () => {
 };
 
 export default SuperadminDashboard;
-
