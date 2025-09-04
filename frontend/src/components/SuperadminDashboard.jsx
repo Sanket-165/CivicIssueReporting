@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api/api';
 import MapView from './MapView.jsx';
 import ComplaintList from './ComplaintList.jsx';
-import { Shield, Inbox, BarChart2, CheckCircle, Clock, Loader, AlertTriangle } from 'lucide-react';
+import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List } from 'lucide-react';
 
 // A dedicated skeleton loader for the dashboard for a better UX
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
-    <div className="h-16 bg-border rounded-lg"></div>
-    <div className="h-96 bg-border rounded-lg"></div>
-    <div className="h-96 bg-border rounded-lg"></div>
+    <div className="h-40 bg-primary rounded-lg"></div>
+    <div className="h-[600px] bg-primary rounded-lg"></div>
+    <div className="h-96 bg-primary rounded-lg"></div>
   </div>
 );
 
@@ -93,17 +93,21 @@ const SuperadminDashboard = () => {
         </div>
 
         {/* Map View Card */}
-        <div className="bg-primary border border-border rounded-lg p-4 sm:p-6 space-y-4">
-            <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-text-primary">Report Locations</h2>
+        <div className="bg-primary border border-border rounded-lg p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+                <MapPin className="text-accent" size={24} />
+                <h2 className="text-xl font-semibold text-text-primary">Report Locations</h2>
             </div>
-            <MapView complaints={complaints} />
+            <div className="h-96 md:h-[500px] w-full rounded-md overflow-hidden">
+                <MapView complaints={complaints} />
+            </div>
         </div>
         
         {/* Complaint List Card */}
-        <div className="bg-primary border border-border rounded-lg p-4 sm:p-6 space-y-4">
-            <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-text-primary">All Complaints</h2>
+        <div className="bg-primary border border-border rounded-lg p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+                <List className="text-accent" size={24} />
+                <h2 className="text-xl font-semibold text-text-primary">All Complaints</h2>
             </div>
             <ComplaintList complaints={complaints} onStatusUpdate={handleStatusUpdate} />
         </div>
@@ -112,3 +116,4 @@ const SuperadminDashboard = () => {
 };
 
 export default SuperadminDashboard;
+

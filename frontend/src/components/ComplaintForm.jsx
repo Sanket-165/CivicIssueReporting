@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {React, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/api';
 import { GoogleMap, useJsApiLoader, MarkerF, Autocomplete } from '@react-google-maps/api';
 import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X, Search } from 'lucide-react';
@@ -12,7 +12,10 @@ const mapContainerStyle = {
 const mapOptions = {
   disableDefaultUI: true,
   zoomControl: true,
+  mapTypeControl: true, // Allows switching map types
+  mapTypeId: 'satellite', // Default to satellite view
   styles: [
+    // Styles for the ROADMAP view to keep it dark
     { elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#1e293b' }] },
     { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
@@ -35,6 +38,16 @@ const mapOptions = {
     { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
     { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#505050" }] },
     { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] },
+    // Hide points of interest and business icons
+    {
+        featureType: "poi.business",
+        stylers: [{ visibility: "off" }],
+    },
+    {
+        featureType: "transit",
+        elementType: "labels.icon",
+        stylers: [{ visibility: "off" }],
+    },
   ],
 };
 

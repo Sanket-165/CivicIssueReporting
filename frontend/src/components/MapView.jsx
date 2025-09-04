@@ -2,34 +2,6 @@ import React, { useState } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 
-// Custom dark theme styles for the Google Map to match our app's aesthetic
-const mapStyles = [
-  { elementType: "geometry", stylers: [{ color: "#1e293b" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1e293b" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#cbd5e1" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#2c5282" }] },
-  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#747474" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3f4f6" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d0d0d0" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#505050" }] },
-  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] },
-];
-
-const mapOptions = {
-  styles: mapStyles,
-  disableDefaultUI: true,
-  zoomControl: true,
-};
-
 // A skeleton loader for a better user experience while the map loads
 const MapSkeleton = () => (
     <div className="bg-primary border border-border rounded-lg flex items-center justify-center w-full h-full min-h-[500px]">
@@ -39,6 +11,38 @@ const MapSkeleton = () => (
         </div>
     </div>
 );
+
+const mapOptions = {
+  disableDefaultUI: true,
+  zoomControl: true,
+  mapTypeControl: true, // Allows switching map types
+  mapTypeId: 'hybrid', // Default to satellite view
+  styles: [
+    // These styles apply to the 'Roadmap' view to keep it dark
+    { elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#1e293b' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#cbd5e1' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#2c5282' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#747474' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+
+    // These styles hide unnecessary labels in BOTH satellite and roadmap views
+    {
+        featureType: "poi", // Hides icons for all Points of Interest (shops, parks, etc.)
+        elementType: "labels.icon",
+        stylers: [{ visibility: "off" }],
+    },
+    {
+        featureType: "transit", // Hides icons for transit stations (bus, train)
+        elementType: "labels.icon",
+        stylers: [{ visibility: "off" }],
+    },
+  ],
+};
 
 const MapView = ({ complaints }) => {
   const [activeMarker, setActiveMarker] = useState(null);
@@ -71,7 +75,7 @@ const MapView = ({ complaints }) => {
   if (!isLoaded) return <MapSkeleton />;
 
   return (
-    <div className="w-full h-[500px] bg-primary border border-border rounded-lg overflow-hidden">
+    <div className="w-full h-full bg-primary border border-border rounded-lg overflow-hidden">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
         center={{ lat: 18.5204, lng: 73.8567 }} // Pune Center
