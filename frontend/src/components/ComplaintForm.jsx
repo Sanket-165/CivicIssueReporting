@@ -13,7 +13,7 @@ const mapOptions = {
   disableDefaultUI: true,
   zoomControl: true,
   mapTypeControl: true, // Allows switching map types
-  mapTypeId: 'satellite', // Default to satellite view
+  mapTypeId: 'hybrid', // Default to satellite view
   styles: [
     // Styles for the ROADMAP view to keep it dark
     { elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
@@ -41,12 +41,13 @@ const mapOptions = {
     // Hide points of interest and business icons
     {
         featureType: "poi.business",
-        stylers: [{ visibility: "off" }],
+        elementType: "labels.icon",
+        stylers: [{ visibility: "on" }],
     },
     {
         featureType: "transit",
         elementType: "labels.icon",
-        stylers: [{ visibility: "off" }],
+        stylers: [{ visibility: "on" }],
     },
   ],
 };
@@ -67,7 +68,6 @@ const libraries = ['places'];
 const ComplaintForm = ({ onComplaintSubmitted }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [image, setImage] = useState(null);
     const [category, setCategory] = useState('');
     const [mapCenter, setMapCenter] = useState({ lat: 18.5204, lng: 73.8567 }); // Pune
     const [markerPosition, setMarkerPosition] = useState(null);
@@ -75,13 +75,16 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     const [audioBlob, setAudioBlob] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [imagePreview, setImagePreview] = useState(null);
     const [autocomplete, setAutocomplete] = useState(null);
     const [showCustomTitleInput, setShowCustomTitleInput] = useState(false);
+    
+    // New states for image capture and geotagging
+    const [capturedImage, setCapturedImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [geoTagData, setGeoTagData] = useState(null);
 
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
-    const imageInputRef = useRef(null);
 
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
@@ -127,7 +130,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     
     const handleTitleSelectChange = (e) => {
         const value = e.target.value;
-        if (value === '__OTHER__') {
+        if (value === '_OTHER_') {
             setShowCustomTitleInput(true);
             setTitle(''); // Clear title to allow custom input
         } else {
@@ -159,23 +162,32 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
             setIsRecording(false);
         }
     };
-
-    const handleImageChange = (e) => {
+    
+    // New function to handle image capture and geotagging
+    const handleCaptureImage = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setImage(file);
+            setCapturedImage(file);
             setImagePreview(URL.createObjectURL(file));
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude, accuracy } = position.coords;
+                        setGeoTagData({ latitude, longitude, accuracy });
+                        setError('');
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        setError('Unable to get your location. Please ensure location services are enabled.');
+                    }
+                );
+            } else {
+                setError('Geolocation is not supported by your browser.');
+            }
         }
     };
 
-    const handleRemoveImage = () => {
-        setImage(null);
-        setImagePreview(null);
-        if (imageInputRef.current) {
-            imageInputRef.current.value = "";
-        }
-    };
-    
     const handleRemoveAudio = () => {
         setAudioBlob(null);
     };
@@ -190,8 +202,8 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!markerPosition || !image || !category || !title || !description) {
-            setError('Please fill out all required fields and place a pin on the map.');
+        if (!markerPosition || !capturedImage || !geoTagData || !category || !title || !description) {
+            setError('Please fill out all required fields, place a pin on the map, and capture an image.');
             return;
         }
         setLoading(true);
@@ -201,9 +213,14 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
         formData.append('description', description);
         formData.append('latitude', markerPosition.lat);
         formData.append('longitude', markerPosition.lng);
-        formData.append('image', image);
+        formData.append('image', capturedImage); // Append the captured image
         formData.append('category', category);
         if (audioBlob) formData.append('voiceNote', audioBlob, 'voice-note.webm');
+        
+        // Append geotag data
+        formData.append('geotagLatitude', geoTagData.latitude);
+        formData.append('geotagLongitude', geoTagData.longitude);
+        formData.append('geotagAccuracy', geoTagData.accuracy);
 
         try {
             await api.post('/complaints', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -287,7 +304,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                             <label htmlFor="title-select" className="block text-sm font-medium text-text-secondary mb-2">Issue Title</label>
                             <select 
                                 id="title-select"
-                                value={showCustomTitleInput ? '__OTHER__' : title} 
+                                value={showCustomTitleInput ? '_OTHER_' : title} 
                                 onChange={handleTitleSelectChange} 
                                 required 
                                 disabled={!category || category === 'Other'}
@@ -297,7 +314,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                                 {category && issueTitlesByCategory[category]?.map(issueTitle => (
                                     <option key={issueTitle} value={issueTitle}>{issueTitle}</option>
                                 ))}
-                                {category && category !== 'Other' && <option value="__OTHER__">Other (please specify)</option>}
+                                {category && category !== 'Other' && <option value="_OTHER_">Other (please specify)</option>}
                             </select>
                         </div>
                         
@@ -326,13 +343,21 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                     <p className="text-text-secondary text-sm">An image is required. You can also record a voice note.</p>
                     <div className="mt-4 space-y-4">
                         <div>
-                            <label htmlFor="image-input" className="block text-sm font-medium text-text-secondary mb-2">Upload Image*</label>
+                            <label htmlFor="image-capture" className="block text-sm font-medium text-text-secondary mb-2">Capture Image*</label>
                             {!imagePreview ? (
-                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" required className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-border file:text-text-primary hover:file:bg-accent hover:file:text-background transition-colors" />
+                                <input id="image-capture" type="file" onChange={handleCaptureImage} accept="image/*" capture="environment" required className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-border file:text-text-primary hover:file:bg-accent hover:file:text-background transition-colors" />
                             ) : (
                                 <div className="relative w-full max-w-xs">
                                     <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover" />
-                                    <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-background/50 text-white rounded-full p-1 hover:bg-background transition-colors">
+                                    <div className="mt-2 text-sm text-text-secondary">
+                                        {geoTagData && (
+                                            <p>Location captured: <span className="font-semibold">{geoTagData.latitude.toFixed(4)}</span>, <span className="font-semibold">{geoTagData.longitude.toFixed(4)}</span></p>
+                                        )}
+                                        {!geoTagData && (
+                                            <p className="text-priority-high">Geotagging failed. Please check location permissions.</p>
+                                        )}
+                                    </div>
+                                    <button type="button" onClick={() => { setCapturedImage(null); setImagePreview(null); setGeoTagData(null); }} className="absolute top-2 right-2 bg-background/50 text-white rounded-full p-1 hover:bg-background transition-colors">
                                         <X size={16} />
                                     </button>
                                 </div>
@@ -343,7 +368,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                            <label className="block text-sm font-medium text-text-secondary mb-2">Record Voice Note (Optional)</label>
                             <div className="flex items-center gap-4">
                                 {!audioBlob && (
-                                    <button type="button" onClick={handleMicClick} className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-priority-high/20 text-priority-high animate-pulse' : 'bg-border text-accent hover:bg-accent hover:text-background'}`}>
+                                    <button type="button" onClick={handleMicClick} className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${isRecording} `? 'bg-priority-high/20 text-priority-high animate-pulse' : 'bg-border text-accent hover:bg-accent hover:text-background'}>
                                         {isRecording ? <StopCircle /> : <Mic />}
                                     </button>
                                 )}
@@ -381,4 +406,3 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
 };
 
 export default ComplaintForm;
-
