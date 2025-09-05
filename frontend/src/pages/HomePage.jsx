@@ -144,7 +144,7 @@ const HomePage = () => {
             Ready to Make a Difference?
           </h2>
           <p className="mt-4 text-lg text-text-secondary-on-light">
-            Join thousands of citizens improving their communities. Your voice matters.
+            Join with the citizens improving our communities. Your voice matters.
           </p>
           <div className="mt-8 flex justify-center">
             {user ? (
