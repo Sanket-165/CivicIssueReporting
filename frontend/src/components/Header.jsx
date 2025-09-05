@@ -15,6 +15,9 @@ const Header = () => {
   const isDashboardActive = location.pathname.includes('-dashboard');
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
+  
+  // Determine if the back button should be shown
+  const showBackButton = isDashboardActive || isLoginPage || isRegisterPage;
 
   const handleDashboardClick = () => {
     if (user.role === 'superadmin') {
@@ -94,7 +97,7 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              {isDashboardActive && (
+              {showBackButton && (
                  <Link to="/" className="text-gray-400 hover:text-accent transition-colors">
                     <ArrowLeftCircle size={24} />
                  </Link>
