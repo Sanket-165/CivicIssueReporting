@@ -98,8 +98,8 @@ const MapView = ({ complaints }) => {
                 options={{ pixelOffset: new window.google.maps.Size(0, -30) }}
               >
                 <div className="bg-background text-text-primary p-2 rounded-md">
-                  <h4 className="font-bold">{complaint.title}</h4>
-                  <p className="text-sm">{complaint.category}</p>
+                  <h4 className="font-bold text-black">{complaint.title}</h4>
+                  <p className="text-sm text-black">{complaint.category}</p>
                 </div>
               </InfoWindowF>
             )}

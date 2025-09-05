@@ -136,7 +136,8 @@ const SuperadminDashboard = () => {
                             <XAxis dataKey="name" tick={{ fill: '#4b5563' }} tickLine={{ stroke: '#d1d5db' }} />
                             <YAxis tick={{ fill: '#4b5563' }} tickLine={{ stroke: '#d1d5db' }} />
                             <Tooltip 
-                                cursor={{fill: '#f3f4f6'}} 
+                                // This is the line to change. Let's make the grey darker.
+                                cursor={{fill: '#d3d3d3'}} // Changed from '#f3f4f6'
                                 contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb'}} 
                                 itemStyle={{ color: '#111827' }}
                                 labelStyle={{ color: '#4b5563' }}
