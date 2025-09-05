@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, LogIn, Loader2, AlertTriangle, Shield } from 'lucide-react';
+import { User, Mail, Lock, LogIn, Loader2, AlertTriangle, Shield, Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -10,6 +10,8 @@ const RegisterPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -76,24 +78,38 @@ const RegisterPage = () => {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
-                type="password" 
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required 
-                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-10 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
               />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
               <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
-                type="password" 
+                type={showConfirmPassword ? 'text' : 'password'} 
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required 
-                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-10 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
               />
+               <button 
+                type="button" 
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
             <button 
               type="submit" 

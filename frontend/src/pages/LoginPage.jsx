@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, Loader2, AlertTriangle, Shield } from 'lucide-react';
+import { Mail, Lock, LogIn, Loader2, AlertTriangle, Shield, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
   const { login } = useAuth();
   
   const location = useLocation();
   const navigate = useNavigate();
-  // Redirect back to the page the user was trying to access, or to the homepage
   const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e) => {
@@ -21,8 +21,6 @@ const LoginPage = () => {
     setLoading(true);
     try {
       await login(email, password);
-      // On successful login, AuthContext will handle navigation
-      // We can add a fallback navigation here if needed
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to log in. Please check your credentials.');
@@ -65,13 +63,20 @@ const LoginPage = () => {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
-                type="password" 
+                type={showPassword ? 'text' : 'password'} 
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required 
-                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-10 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
               />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ?  <Eye size={20}/> : <EyeOff size={20} />}
+              </button>
             </div>
             <button 
               type="submit" 
