@@ -1,48 +1,108 @@
 import React, { useState } from 'react';
-import { Image as ImageIcon, Mic, X, ChevronRight, Inbox, Clock, CheckCircle, Loader } from 'lucide-react';
+import { Check, CheckCircle, ChevronRight, Clock, Inbox, Loader, MapPin, X } from 'lucide-react';
 
-// Modal component for showing full complaint details
+// Helper function to calculate distance between two lat/lng points (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // metres
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c; // in metres
+}
+
+// Modal component for showing full complaint details - Light Theme
 const ComplaintModal = ({ complaint, onClose }) => {
   if (!complaint) return null;
 
+  let distance = null;
+  if (complaint.geotag && complaint.location) {
+      distance = calculateDistance(
+          complaint.location.coordinates[1],
+          complaint.location.coordinates[0],
+          complaint.geotag.latitude,
+          complaint.geotag.longitude
+      );
+  }
+
   return (
     <div 
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-primary border border-border rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()} // Prevent closing modal when clicking inside
+        className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-border flex justify-between items-center sticky top-0 bg-primary/95 backdrop-blur-sm">
-          <h2 className="text-xl font-bold text-text-primary">Complaint Details</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-sm">
+          <h2 className="text-xl font-bold text-text-on-light">Complaint Details</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition-colors">
             <X size={24} />
           </button>
         </div>
         <div className="p-6 space-y-6">
-          <div className="rounded-lg overflow-hidden border border-border">
+          <div className="rounded-lg overflow-hidden border border-gray-200">
             <img src={complaint.imageUrl} alt={complaint.title} className="w-full h-auto object-cover" />
           </div>
           <div>
-            <p className="text-sm text-text-secondary">{complaint.category}</p>
-            <h3 className="text-2xl font-bold text-text-primary mt-1">{complaint.title}</h3>
-            <p className="text-text-secondary mt-2">{complaint.description}</p>
+            <p className="text-sm text-text-secondary-on-light">{complaint.category}</p>
+            <h3 className="text-2xl font-bold text-text-on-light mt-1">{complaint.title}</h3>
+            <p className="text-text-secondary-on-light mt-2">{complaint.description}</p>
           </div>
           {complaint.voiceNoteUrl && (
             <div>
-              <h4 className="font-semibold text-text-primary mb-2">Recorded Voice Note</h4>
+              <h4 className="font-semibold text-text-on-light mb-2">Recorded Voice Note</h4>
               <audio src={complaint.voiceNoteUrl} controls className="w-full h-12" />
             </div>
           )}
-           <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t border-border">
+          
+          {complaint.geotag && (
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="font-semibold text-text-on-light mb-3 flex items-center gap-2">
+                <MapPin size={16} /> Location Verification
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="bg-gray-100 p-3 rounded-md">
+                      <p className="text-text-secondary-on-light">User Pinned Location</p>
+                      <p className="font-mono text-text-on-light text-xs mt-1">
+                          {complaint.location.coordinates[1].toFixed(5)}, {complaint.location.coordinates[0].toFixed(5)}
+                      </p>
+                  </div>
+                   <div className="bg-gray-100 p-3 rounded-md">
+                      <p className="text-text-secondary-on-light">Photo Geotag Location</p>
+                      <p className="font-mono text-text-on-light text-xs mt-1">
+                          {complaint.geotag.latitude.toFixed(5)}, {complaint.geotag.longitude.toFixed(5)}
+                      </p>
+                  </div>
+              </div>
+              <div className="mt-3">
+                  {distance !== null && distance < 100 ? (
+                      <div className="inline-flex items-center gap-2 text-green-700 bg-green-100 px-3 py-1 rounded-full text-xs font-semibold">
+                          <Check size={14} /> Verified Location (Distance: {distance.toFixed(1)}m)
+                      </div>
+                  ) : (
+                      <div className="inline-flex items-center gap-2 text-yellow-700 bg-yellow-100 px-3 py-1 rounded-full text-xs font-semibold">
+                          <AlertTriangle size={14} /> Location Mismatch (Distance: {distance.toFixed(1)}m)
+                      </div>
+                  )}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t border-gray-200">
             <div>
-              <p className="text-text-secondary">Reported By</p>
-              <p className="font-semibold text-text-primary">{complaint.reportedBy?.name || 'N/A'}</p>
+              <p className="text-text-secondary-on-light">Reported By</p>
+              <p className="font-semibold text-text-on-light">{complaint.reportedBy?.name || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-text-secondary">Reported On</p>
-              <p className="font-semibold text-text-primary">{new Date(complaint.createdAt).toLocaleString()}</p>
+              <p className="text-text-secondary-on-light">Reported On</p>
+              <p className="font-semibold text-text-on-light">{new Date(complaint.createdAt).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -51,28 +111,28 @@ const ComplaintModal = ({ complaint, onClose }) => {
   );
 };
 
-// Main Complaint List Component
+// Main Complaint List Component - Light Theme
 const ComplaintList = ({ complaints, onStatusUpdate }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
 
   const getStatusInfo = (status) => {
     switch (status) {
       case 'resolved':
-        return { icon: <CheckCircle size={16} />, color: 'text-priority-low', ring: 'ring-priority-low/30' };
+        return { icon: <CheckCircle size={16} />, color: 'text-priority-low' };
       case 'under consideration':
-        return { icon: <Loader size={16} className="animate-spin" />, color: 'text-priority-medium', ring: 'ring-priority-medium/30' };
+        return { icon: <Loader size={16} className="animate-spin" />, color: 'text-priority-medium' };
       case 'pending':
       default:
-        return { icon: <Clock size={16} />, color: 'text-priority-high', ring: 'ring-priority-high/30' };
+        return { icon: <Clock size={16} />, color: 'text-priority-high' };
     }
   };
   
   if (complaints.length === 0) {
     return (
-      <div className="text-center py-16 px-6 bg-primary rounded-lg border-2 border-dashed border-border">
-        <Inbox size={48} className="mx-auto text-text-secondary" />
-        <h2 className="mt-4 text-xl font-semibold text-text-primary">No Issues Found</h2>
-        <p className="text-text-secondary mt-2">There are currently no complaints matching your filter.</p>
+      <div className="text-center py-16 px-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
+        <Inbox size={48} className="mx-auto text-gray-400" />
+        <h2 className="mt-4 text-xl font-semibold text-text-on-light">No Issues Found</h2>
+        <p className="text-text-secondary-on-light mt-2">There are currently no complaints matching your filter.</p>
       </div>
     );
   }
@@ -81,7 +141,7 @@ const ComplaintList = ({ complaints, onStatusUpdate }) => {
     <>
       <div className="space-y-4">
         {/* Table Header for Desktop */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-sm font-semibold text-text-secondary border-b border-border">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-sm font-semibold text-text-secondary-on-light border-b border-gray-200">
           <div className="col-span-4">Title</div>
           <div className="col-span-2">Category</div>
           <div className="col-span-2">Priority</div>
@@ -93,31 +153,31 @@ const ComplaintList = ({ complaints, onStatusUpdate }) => {
         {complaints.map(c => {
           const statusInfo = getStatusInfo(c.status);
           return (
-            <div key={c._id} className="bg-primary border border-border rounded-lg transition-shadow hover:shadow-lg hover:border-accent/50">
+            <div key={c._id} className="bg-white border border-gray-200 rounded-lg transition-shadow hover:shadow-lg hover:border-accent shadow-sm">
               <div className="grid grid-cols-12 gap-4 items-center p-4">
                 
                 {/* Mobile Title & View Button */}
                 <div className="col-span-11 md:col-span-4 block md:hidden">
-                    <p className="font-bold text-text-primary">{c.title}</p>
-                    <p className="text-sm text-text-secondary">{c.category}</p>
+                    <p className="font-bold text-text-on-light">{c.title}</p>
+                    <p className="text-sm text-text-secondary-on-light">{c.category}</p>
                 </div>
-                 <button onClick={() => setSelectedComplaint(c)} className="col-span-1 flex justify-end items-center md:hidden text-text-secondary hover:text-accent transition-colors">
+                 <button onClick={() => setSelectedComplaint(c)} className="col-span-1 flex justify-end items-center md:hidden text-text-secondary-on-light hover:text-accent transition-colors">
                     <ChevronRight size={20} />
                 </button>
 
                 {/* Desktop Title */}
                 <div className="hidden md:block col-span-4">
-                  <p className="font-bold text-text-primary truncate">{c.title}</p>
+                  <p className="font-bold text-text-on-light truncate">{c.title}</p>
                 </div>
 
                 {/* Category */}
                  <div className="hidden md:block col-span-2">
-                  <p className="text-sm text-text-secondary">{c.category}</p>
+                  <p className="text-sm text-text-secondary-on-light">{c.category}</p>
                 </div>
                 
                 {/* Priority */}
                 <div className="col-span-6 md:col-span-2">
-                   <p className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full ring-1 ${statusInfo.ring} ${statusInfo.color}`}>
+                   <p className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full ring-1 ring-gray-200 ${statusInfo.color}`}>
                      <span className="font-bold">{c.priority}</span>
                    </p>
                 </div>
@@ -127,7 +187,7 @@ const ComplaintList = ({ complaints, onStatusUpdate }) => {
                    <select 
                     value={c.status} 
                     onChange={(e) => onStatusUpdate(c._id, e.target.value)}
-                    className={`w-full bg-background border border-border rounded-md p-2 text-sm font-semibold focus:ring-2 focus:ring-accent focus:outline-none transition-shadow ${statusInfo.color}`}
+                    className={`w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-sm font-semibold focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm ${statusInfo.color}`}
                   >
                     <option value="pending">Pending</option>
                     <option value="under consideration">Under Consideration</option>
@@ -136,7 +196,7 @@ const ComplaintList = ({ complaints, onStatusUpdate }) => {
                 </div>
 
                 {/* Desktop View Button */}
-                <button onClick={() => setSelectedComplaint(c)} className="hidden md:flex col-span-1 justify-end items-center text-text-secondary hover:text-accent font-semibold text-sm transition-colors">
+                <button onClick={() => setSelectedComplaint(c)} className="hidden md:flex col-span-1 justify-end items-center text-text-secondary-on-light hover:text-accent font-semibold text-sm transition-colors">
                   View <ChevronRight size={16} className="ml-1" />
                 </button>
               </div>

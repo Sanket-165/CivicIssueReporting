@@ -32,19 +32,19 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background p-4">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
-        <div className="bg-primary border border-border rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-8 space-y-6">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center bg-border h-16 w-16 rounded-full mb-4">
+            <div className="inline-flex items-center justify-center bg-gray-100 h-16 w-16 rounded-full mb-4">
                 <Shield className="h-8 w-8 text-accent" />
             </div>
-            <h1 className="text-3xl font-bold text-text-primary">Create an Account</h1>
-            <p className="text-text-secondary mt-2">Join to report issues and improve your community.</p>
+            <h1 className="text-3xl font-bold text-text-on-light">Create an Account</h1>
+            <p className="text-text-secondary-on-light mt-2">Join to report issues and improve your community.</p>
           </div>
 
           {error && (
-            <div className="bg-priority-high/10 border border-priority-high/30 text-priority-high text-sm p-3 rounded-md flex items-center gap-3">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-md flex items-center gap-3">
               <AlertTriangle size={20} />
               <span>{error}</span>
             </div>
@@ -52,60 +52,60 @@ const RegisterPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
                 type="text" 
                 placeholder="Full Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required 
-                className="w-full bg-background border border-border rounded-md py-3 pl-10 pr-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" 
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm" 
               />
             </div>
-             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+              <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
                 type="email" 
                 placeholder="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required 
-                className="w-full bg-background border border-border rounded-md py-3 pl-10 pr-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow" 
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm" 
               />
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
                 type="password" 
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required 
-                className="w-full bg-background border border-border rounded-md py-3 pl-10 pr-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow"
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
               />
             </div>
-             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+              <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input 
                 type="password" 
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required 
-                className="w-full bg-background border border-border rounded-md py-3 pl-10 pr-3 text-text-primary focus:ring-2 focus:ring-accent focus:outline-none transition-shadow"
+                className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-10 pr-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
               />
             </div>
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-accent text-background font-bold py-3 px-6 rounded-md hover:bg-accent-dark disabled:bg-border disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+              className="w-full bg-accent text-white font-bold py-3 px-6 rounded-md hover:bg-accent-dark disabled:bg-gray-200 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-md"
             >
               {loading ? <Loader2 className="animate-spin" /> : <LogIn size={20} />}
               <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
             </button>
           </form>
 
-          <div className="text-center text-sm text-text-secondary">
+          <div className="text-center text-sm text-text-secondary-on-light">
             <p>
               Already have an account?{' '}
               <Link to="/login" className="font-medium text-accent hover:underline">

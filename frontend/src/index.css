@@ -2,25 +2,33 @@
 
 @import "tailwindcss";
 
-
 @theme {
-  /* This is the line that has been changed to make the background red */
-  --color-background: #000030;      /* A deep red shade */
+  /* --- New Light & Purple Theme --- */
+
+  /* Page Background */
+  --color-background: #ffffff;      /* White */
   
-  --color-primary: #1e293b;        /* slate-800 (Cards will keep their dark color) */
-  --color-border: #334155;        /* slate-700 */
-  --color-border-dark: #94a3b8;    /* slate-800 for darker borders */
+  /* Card & UI Element Colors */
+  --color-primary: #301934;        /* Dark Purple */
+  --color-border: #4a2c52;        /* Lighter Purple for borders */
+  --color-border-dark: #301934;    /* Dark Purple */
 
-  --color-accent: #22d3ee;        /* cyan-400 */
-  --color-accent-dark: #06b6d4;      /* cyan-500 */
+  /* Accent Color */
+  --color-accent: #a21caf;         /* Fuchsia 500 */
+  --color-accent-dark: #9b1c8f;    /* Fuchsia 600 */
 
-  --color-text-primary: #f8fafc;   /* slate-50 */
-  --color-text-secondary: #94a3b8;  /* slate-400 */
+  /* Text Colors */
+  --color-text-primary: #f8fafc;   /* White (for use on dark purple cards) */
+  --color-text-secondary: #d1d5db; /* Light Gray (for use on dark purple cards) */
+  --color-text-on-light: #111827;   /* Dark Gray (for base text on white background) */
+  --color-text-secondary-on-light: #4b5563; /* Mid Gray (for secondary text on white background) */
 
+  /* Priority Colors (remain unchanged) */
   --color-priority-high: #ef4444;   /* red-500 */
   --color-priority-medium: #f97316; /* orange-500 */
   --color-priority-low: #22c55e;    /* green-500 */
 
+  /* Font & Animation (remain unchanged) */
   --font-sans: Inter, sans-serif;
 
   @keyframes spin-slow {
@@ -33,5 +41,6 @@
 
 /* Base styles for the body tag */
 body {
-  @apply bg-background font-sans text-text-secondary;
+  /* Apply the new light theme base styles */
+  @apply bg-background font-sans text-text-on-light;
 }
