@@ -100,7 +100,7 @@ const Header = () => {
                  </Link>
               )}
               <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-accent">
-                <img src="src/assets/logo.png" className="h-50" alt="JanNivaran Logo" />
+                <img src="/logo.png" className="h-50" alt="JanNivaran Logo" />
                 
               </Link>
             </div>
