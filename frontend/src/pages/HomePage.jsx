@@ -121,11 +121,11 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 <div>
-                    <p className="text-5xl font-extrabold text-accent">12,000+</p>
+                    <p className="text-5xl font-extrabold text-accent">X+</p>
                     <p className="mt-2 text-lg text-text-secondary">Issues Resolved</p>
                 </div>
                 <div>
-                    <p className="text-5xl font-extrabold text-accent">5,000+</p>
+                    <p className="text-5xl font-extrabold text-accent">Y+</p>
                     <p className="mt-2 text-lg text-text-secondary">Active Citizens</p>
                 </div>
                 <div>
