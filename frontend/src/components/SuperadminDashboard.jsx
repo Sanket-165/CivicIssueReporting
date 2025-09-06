@@ -21,6 +21,7 @@ const SuperadminDashboard = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all'); // ✨ NEW: State for the status filter
 
     const fetchComplaints = useCallback(async () => {
         try {
@@ -51,13 +52,14 @@ const SuperadminDashboard = () => {
     const filteredComplaints = useMemo(() => {
         return complaints.filter(complaint => {
             const categoryMatch = selectedCategory === 'all' || complaint.category === selectedCategory;
+            const statusMatch = selectedStatus === 'all' || complaint.status === selectedStatus; // ✨ NEW: Status filter logic
             const searchTermMatch = searchTerm.trim() === '' || 
                 complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (complaint.reportedBy?.name && complaint.reportedBy.name.toLowerCase().includes(searchTerm.toLowerCase()));
             
-            return categoryMatch && searchTermMatch;
+            return categoryMatch && searchTermMatch && statusMatch; // ✨ MODIFIED: Combined all filters
         });
-    }, [complaints, searchTerm, selectedCategory]);
+    }, [complaints, searchTerm, selectedCategory, selectedStatus]); // ✨ MODIFIED: Added dependency
 
     const complaintCategories = useMemo(() => {
         const categories = new Set(complaints.map(c => c.category));
@@ -155,11 +157,11 @@ const SuperadminDashboard = () => {
                             <YAxis tick={{ fill: '#4b5563' }} tickLine={{ stroke: '#d1d5db' }} />
                             <Tooltip 
                                                 // This is the line to change. Let's make the grey darker.
-                                 cursor={{fill: '#d3d3d3'}} // Changed from '#f3f4f6'
-                                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb'}} 
-                                itemStyle={{ color: '#111827' }}
-                                labelStyle={{ color: '#4b5563' }}
-                                labelFormatter={(value) => barChartData.find(d => d.name === value)?.fullName} 
+                                                cursor={{fill: '#d3d3d3'}} // Changed from '#f3f4f6'
+                                                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb'}} 
+                                                itemStyle={{ color: '#111827' }}
+                                                labelStyle={{ color: '#4b5563' }}
+                                                labelFormatter={(value) => barChartData.find(d => d.name === value)?.fullName} 
                             />
                             <Legend wrapperStyle={{ color: '#4b5563' }} />
                             <Bar dataKey="Pending" fill="#ef4444" />
@@ -216,18 +218,19 @@ const SuperadminDashboard = () => {
                 complaints={filteredComplaints} 
                 onStatusUpdate={handleStatusUpdate}
                 controls={
+                    // ✨ MODIFIED: Changed grid layout to accommodate the new filter
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2 relative">
+                        <div className="md:col-span-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search by title or reporter name..."
+                                placeholder="Search by title or name..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-md py-2 pl-10 pr-4 focus:ring-2 focus:ring-accent focus:outline-none"
                             />
                         </div>
-                        <div>
+                        <div className="md:col-span-1">
                             <select
                                 value={selectedCategory}
                                 onChange={e => setSelectedCategory(e.target.value)}
@@ -238,6 +241,19 @@ const SuperadminDashboard = () => {
                                         {cat === 'all' ? 'All Departments' : cat}
                                     </option>
                                 ))}
+                            </select>
+                        </div>
+                        {/* ✨ NEW: Status filter dropdown */}
+                        <div className="md:col-span-1">
+                            <select
+                                value={selectedStatus}
+                                onChange={e => setSelectedStatus(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-accent focus:outline-none"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="under consideration">In Progress</option>
+                                <option value="resolved">Resolved</option>
                             </select>
                         </div>
                     </div>
