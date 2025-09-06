@@ -304,7 +304,9 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
       >
         <X size={16} />
       </button>
+      <div className='mt-2 text-sm text-gray-700'>Geotag Captured <span>({markerPosition.lat}, {markerPosition.lng})</span></div>
     </div>
+    
   )}
 </div>
                         
