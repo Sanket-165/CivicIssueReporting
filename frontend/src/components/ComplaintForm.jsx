@@ -265,19 +265,48 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                             <textarea id="description-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide as much detail as possible..." required rows="4" className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm" />
                         </div>
 
-                         <div>
-                            <label htmlFor="image-input" className="block text-sm font-medium text-text-secondary-on-light mb-2">Upload Image*</label>
-                            {!imagePreview ? (
-                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" capture="environment" required className="w-full text-sm text-text-secondary-on-light file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-accent hover:file:bg-accent hover:file:text-white transition-colors" />
-                            ) : (
-                                <div className="relative w-full max-w-xs">
-                                    <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover shadow-md" />
-                                    <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors">
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        <div>
+  <label className="block text-sm font-medium text-text-secondary-on-light mb-2">
+    Capture Image*
+  </label>
+
+  {!imagePreview ? (
+    <>
+      <button
+        type="button"
+        onClick={() => imageInputRef.current.click()}
+        className="w-40  bg-accent text-white font-bold py-3 px-6 rounded-md hover:bg-accent-dark transition-colors shadow-md"
+      >
+        Take Photo
+      </button>
+      <input
+        id="image-input"
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageChange}
+        required
+        className="hidden"
+      />
+    </>
+  ) : (
+    <div className="relative w-full max-w-xs">
+      <img
+        src={imagePreview}
+        alt="Complaint preview"
+        className="rounded-md w-full h-auto object-cover shadow-md"
+      />
+      <button
+        type="button"
+        onClick={handleRemoveImage}
+        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  )}
+</div>
                         
                         <div>
                            <label className="block text-sm font-medium text-text-secondary-on-light mb-2">Record Voice Note (Optional)</label>
