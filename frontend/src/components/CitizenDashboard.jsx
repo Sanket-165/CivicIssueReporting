@@ -27,7 +27,7 @@ const ComplaintCard = ({ complaint }) => {
      case 'resolved':
        return { icon: <CheckCircle className="text-priority-low" />, color: 'priority-low' };
      case 'under consideration':
-       return { icon: <Loader className="text-priority-medium animate-spin" />, color: 'priority-medium' };
+       return { icon: <Loader className="text-priority-medium" />, color: 'priority-medium' };
      case 'pending':
      default:
        return { icon: <Clock className="text-priority-high" />, color: 'priority-high' };

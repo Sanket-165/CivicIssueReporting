@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/api';
-import { GoogleMap, useJsApiLoader, MarkerF, Autocomplete } from '@react-google-maps/api';
-import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X, Search } from 'lucide-react';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X } from 'lucide-react';
 
 // Map styles for the light theme (default)
 const mapContainerStyle = {
@@ -14,6 +14,9 @@ const mapOptions = {
   zoomControl: true,
   mapTypeControl: true,
   mapTypeId: 'hybrid', 
+  draggable: false, 
+  scrollwheel: false, 
+  disableDoubleClickZoom: true
 };
 
 // Data structure for category-specific issue titles
@@ -27,7 +30,7 @@ const issueTitlesByCategory = {
 };
 
 const categories = Object.keys(issueTitlesByCategory).concat('Other');
-const libraries = ['places'];
+const libraries = ['geocoding']; // Only geocoding is needed now
 
 const ComplaintForm = ({ onComplaintSubmitted }) => {
     const [title, setTitle] = useState('');
@@ -39,16 +42,14 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     const [audioBlob, setAudioBlob] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [autocomplete, setAutocomplete] = useState(null);
     const [showCustomTitleInput, setShowCustomTitleInput] = useState(false);
-    
-    // States for image capture and geotagging
-    const [capturedImage, setCapturedImage] = useState(null);
+    const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
-    const [geoTagData, setGeoTagData] = useState(null);
+    const [locationName, setLocationName] = useState('Fetching location...');
 
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+    const imageInputRef = useRef(null);
 
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
@@ -57,52 +58,76 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     });
 
     useEffect(() => {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const currentLocation = { lat: latitude, lng: longitude };
-                setMapCenter(currentLocation);
-                setMarkerPosition(currentLocation); 
-            },
-            () => console.warn('Location access denied.')
-        );
-    }, []);
+        if (isLoaded) {
+            const geocoder = new window.google.maps.Geocoder();
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const currentLocation = { lat: latitude, lng: longitude };
+                    setMapCenter(currentLocation);
+                    setMarkerPosition(currentLocation);
 
-    // When category changes, reset the title and custom input visibility
+                    // Reverse geocode to get address
+                    geocoder.geocode({ location: currentLocation }, (results, status) => {
+                        if (status === 'OK' && results[0]) {
+                            setLocationName(results[0].formatted_address);
+                        } else {
+                            setLocationName('Address not found');
+                        }
+                    });
+                },
+                () => {
+                    setError('Unable to get your location. Please enable location services.');
+                    setLocationName('Location access denied');
+                }
+            );
+        }
+    }, [isLoaded]);
+
     useEffect(() => {
         setTitle('');
         setShowCustomTitleInput(category === 'Other');
     }, [category]);
 
-    const handleMapClick = useCallback((e) => {
-        setMarkerPosition({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-    }, []);
-    
-    const onLoad = (autoC) => setAutocomplete(autoC);
-
-    const onPlaceChanged = () => {
-        if (autocomplete !== null) {
-            const place = autocomplete.getPlace();
-            if (place.geometry && place.geometry.location) {
-                const location = place.geometry.location;
-                const newCenter = { lat: location.lat(), lng: location.lng() };
-                setMapCenter(newCenter);
-                setMarkerPosition(newCenter);
-            }
-        }
-    };
-    
     const handleTitleSelectChange = (e) => {
         const value = e.target.value;
         if (value === '_OTHER_') {
             setShowCustomTitleInput(true);
-            setTitle(''); // Clear title to allow custom input
+            setTitle('');
         } else {
             setShowCustomTitleInput(false);
             setTitle(value);
         }
     };
+    
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
+    const handleRemoveImage = () => {
+        setImage(null);
+        setImagePreview(null);
+        if (imageInputRef.current) {
+            imageInputRef.current.value = "";
+        }
+    };
+    
+    const handleRemoveAudio = () => {
+        setAudioBlob(null);
+    };
+
+    const handleMicClick = () => {
+        if (isRecording) stopRecording();
+        else {
+            setAudioBlob(null);
+            startRecording();
+        }
+    };
+    
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -126,48 +151,11 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
             setIsRecording(false);
         }
     };
-    
-    // Function to handle image capture and geotagging
-    const handleCaptureImage = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setCapturedImage(file);
-            setImagePreview(URL.createObjectURL(file));
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const { latitude, longitude, accuracy } = position.coords;
-                        setGeoTagData({ latitude, longitude, accuracy });
-                        setError('');
-                    },
-                    (error) => {
-                        console.error('Geolocation error:', error);
-                        setError('Unable to get your location. Please ensure location services are enabled.');
-                    }
-                );
-            } else {
-                setError('Geolocation is not supported by your browser.');
-            }
-        }
-    };
-
-    const handleRemoveAudio = () => {
-        setAudioBlob(null);
-    };
-
-    const handleMicClick = () => {
-        if (isRecording) stopRecording();
-        else {
-            setAudioBlob(null);
-            startRecording();
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!markerPosition || !capturedImage || !geoTagData || !category || !title || !description) {
-            setError('Please fill out all required fields, place a pin on the map, and capture an image.');
+        if (!markerPosition || !image || !category || !title || !description) {
+            setError('Please fill out all required fields.');
             return;
         }
         setLoading(true);
@@ -177,14 +165,10 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
         formData.append('description', description);
         formData.append('latitude', markerPosition.lat);
         formData.append('longitude', markerPosition.lng);
-        formData.append('image', capturedImage); // Append the captured image
+        formData.append('image', image);
         formData.append('category', category);
+        formData.append('locationName', locationName); // Send the location name
         if (audioBlob) formData.append('voiceNote', audioBlob, 'voice-note.webm');
-        
-        // Append geotag data
-        formData.append('geotagLatitude', geoTagData.latitude);
-        formData.append('geotagLongitude', geoTagData.longitude);
-        formData.append('geotagAccuracy', geoTagData.accuracy);
 
         try {
             await api.post('/complaints', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -205,41 +189,29 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                         <MapPin className="text-accent" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-text-on-light">Pinpoint the Location</h3>
-                        <p className="text-text-secondary-on-light text-sm">Search for a place or click on the map to place a pin.</p>
+                        <h3 className="text-lg font-semibold text-text-on-light">Issue Location</h3>
+                        <p className="text-text-secondary-on-light text-sm">Your live location is automatically captured.</p>
                     </div>
                 </div>
                 
-                {isLoaded && (
-                    <div className="relative mb-4">
-                        <label htmlFor="location-search" className="block text-sm font-medium text-text-secondary-on-light mb-2">Search Location</label>
-                        <div className="relative">
-                            <div className="absolute top-3 left-3 z-10">
-                                 <Search className="text-text-secondary-on-light" />
-                            </div>
-                            <Autocomplete
-                                onLoad={onLoad}
-                                onPlaceChanged={onPlaceChanged}
-                            >
-                                <input
-                                    id="location-search"
-                                    type="text"
-                                    placeholder="Search for a location..."
-                                    className="w-full bg-gray-50 border border-gray-300 rounded-md py-3 pl-12 pr-4 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm"
-                                />
-                            </Autocomplete>
-                        </div>
-                    </div>
-                )}
+                <div className="mb-4">
+                    <label htmlFor="location-name" className="block text-sm font-medium text-text-secondary-on-light mb-2">Captured Address</label>
+                    <input
+                        id="location-name"
+                        type="text"
+                        value={locationName}
+                        disabled
+                        className="w-full bg-gray-100 border border-gray-300 rounded-md py-3 px-4 text-text-secondary-on-light cursor-not-allowed"
+                    />
+                </div>
 
                 <div className="h-96 md:h-[500px] w-full rounded-md overflow-hidden bg-gray-200">
                     {isLoaded ? (
                         <GoogleMap 
                             mapContainerStyle={mapContainerStyle} 
                             center={mapCenter} 
-                            zoom={12} 
+                            zoom={15}
                             options={mapOptions}
-                            onClick={handleMapClick}
                         >
                             {markerPosition && <MarkerF position={markerPosition} />}
                         </GoogleMap>
@@ -247,14 +219,13 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                 </div>
             </div>
 
-            {/* Step 2: Details */}
+            {/* Step 2: Details & Evidence */}
             <div className="flex gap-4">
                 <div className="bg-gray-100 h-10 w-10 rounded-full flex-shrink-0 flex items-center justify-center">
                     <Info className="text-accent" />
                 </div>
                 <div className="w-full">
-                    <h3 className="text-lg font-semibold text-text-on-light">Provide Details</h3>
-                    <p className="text-text-secondary-on-light text-sm">Describe the issue and select a category.</p>
+                    <h3 className="text-lg font-semibold text-text-on-light">Provide Details & Evidence</h3>
                     <div className="mt-4 space-y-4">
                         <div>
                             <label htmlFor="category-select" className="block text-sm font-medium text-text-secondary-on-light mb-2">Issue Category</label>
@@ -293,35 +264,15 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                             <label htmlFor="description-textarea" className="block text-sm font-medium text-text-secondary-on-light mb-2">Detailed Description</label>
                             <textarea id="description-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide as much detail as possible..." required rows="4" className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-text-on-light focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm" />
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Step 3: Evidence */}
-            <div className="flex gap-4">
-                <div className="bg-gray-100 h-10 w-10 rounded-full flex-shrink-0 flex items-center justify-center">
-                    <ImageIcon className="text-accent" />
-                </div>
-                <div className="w-full">
-                    <h3 className="text-lg font-semibold text-text-on-light">Upload Evidence</h3>
-                    <p className="text-text-secondary-on-light text-sm">An image is required. You can also record a voice note.</p>
-                    <div className="mt-4 space-y-4">
-                        <div>
-                            <label htmlFor="image-capture" className="block text-sm font-medium text-text-secondary-on-light mb-2">Capture Image*</label>
+                         <div>
+                            <label htmlFor="image-input" className="block text-sm font-medium text-text-secondary-on-light mb-2">Upload Image*</label>
                             {!imagePreview ? (
-                                <input id="image-capture" type="file" onChange={handleCaptureImage} accept="image/*" capture="environment" required className="w-full text-sm text-text-secondary-on-light file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-accent hover:file:bg-accent hover:file:text-white transition-colors" />
+                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" required className="w-full text-sm text-text-secondary-on-light file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-accent hover:file:bg-accent hover:file:text-white transition-colors" />
                             ) : (
                                 <div className="relative w-full max-w-xs">
                                     <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover shadow-md" />
-                                    <div className="mt-2 text-sm text-text-secondary-on-light">
-                                        {geoTagData && (
-                                            <p>Location captured: <span className="font-semibold">{geoTagData.latitude.toFixed(4)}</span>, <span className="font-semibold">{geoTagData.longitude.toFixed(4)}</span></p>
-                                        )}
-                                        {!geoTagData && (
-                                            <p className="text-priority-high">Geotagging failed. Please check location permissions.</p>
-                                        )}
-                                    </div>
-                                    <button type="button" onClick={() => { setCapturedImage(null); setImagePreview(null); setGeoTagData(null); }} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors">
+                                    <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors">
                                         <X size={16} />
                                     </button>
                                 </div>
