@@ -275,7 +275,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
       <button
         type="button"
         onClick={() => imageInputRef.current.click()}
-        className="w-40  bg-accent text-white font-bold py-3 px-6 rounded-md hover:bg-accent-dark transition-colors shadow-md"
+        className="w-28  bg-accent text-white font-bold py-1 px-1 rounded-md hover:bg-accent-dark transition-colors shadow-md"
       >
         Take Photo
       </button>
