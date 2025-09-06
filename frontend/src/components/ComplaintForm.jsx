@@ -268,7 +268,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                          <div>
                             <label htmlFor="image-input" className="block text-sm font-medium text-text-secondary-on-light mb-2">Upload Image*</label>
                             {!imagePreview ? (
-                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" required className="w-full text-sm text-text-secondary-on-light file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-accent hover:file:bg-accent hover:file:text-white transition-colors" />
+                                <input id="image-input" ref={imageInputRef} type="file" onChange={handleImageChange} accept="image/*" capture="environment" required className="w-full text-sm text-text-secondary-on-light file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-accent hover:file:bg-accent hover:file:text-white transition-colors" />
                             ) : (
                                 <div className="relative w-full max-w-xs">
                                     <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover shadow-md" />
