@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle, ChevronRight, Clock, Inbox, Loader, MapPin, X } from 'lucide-react';
+import { Check, CheckCircle, ChevronRight, Clock, Inbox, Loader, MapPin, X, AlertTriangle } from 'lucide-react';
 
 // Helper function to calculate distance between two lat/lng points (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -112,7 +112,7 @@ const ComplaintModal = ({ complaint, onClose }) => {
 };
 
 // Main Complaint List Component - Light Theme
-const ComplaintList = ({ complaints, onStatusUpdate }) => {
+const ComplaintList = ({ complaints, onStatusUpdate, controls }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
 
   const getStatusInfo = (status) => {
@@ -127,83 +127,85 @@ const ComplaintList = ({ complaints, onStatusUpdate }) => {
     }
   };
   
-  if (complaints.length === 0) {
-    return (
-      <div className="text-center py-16 px-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
-        <Inbox size={48} className="mx-auto text-gray-400" />
-        <h2 className="mt-4 text-xl font-semibold text-text-on-light">No Issues Found</h2>
-        <p className="text-text-secondary-on-light mt-2">There are currently no complaints matching your filter.</p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="space-y-4">
-        {/* Table Header for Desktop */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-sm font-semibold text-text-secondary-on-light border-b border-gray-200">
-          <div className="col-span-4">Title</div>
-          <div className="col-span-2">Category</div>
-          <div className="col-span-2">Priority</div>
-          <div className="col-span-3">Status</div>
-          <div className="col-span-1"></div>
-        </div>
-
-        {/* Complaint Items */}
-        {complaints.map(c => {
-          const statusInfo = getStatusInfo(c.status);
-          return (
-            <div key={c._id} className="bg-white border border-gray-200 rounded-lg transition-shadow hover:shadow-lg hover:border-accent shadow-sm">
-              <div className="grid grid-cols-12 gap-4 items-center p-4">
-                
-                {/* Mobile Title & View Button */}
-                <div className="col-span-11 md:col-span-4 block md:hidden">
-                    <p className="font-bold text-text-on-light">{c.title}</p>
-                    <p className="text-sm text-text-secondary-on-light">{c.category}</p>
-                </div>
-                 <button onClick={() => setSelectedComplaint(c)} className="col-span-1 flex justify-end items-center md:hidden text-text-secondary-on-light hover:text-accent transition-colors">
-                    <ChevronRight size={20} />
-                </button>
-
-                {/* Desktop Title */}
-                <div className="hidden md:block col-span-4">
-                  <p className="font-bold text-text-on-light truncate">{c.title}</p>
-                </div>
-
-                {/* Category */}
-                 <div className="hidden md:block col-span-2">
-                  <p className="text-sm text-text-secondary-on-light">{c.category}</p>
-                </div>
-                
-                {/* Priority */}
-                <div className="col-span-6 md:col-span-2">
-                   <p className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full ring-1 ring-gray-200 ${statusInfo.color}`}>
-                     <span className="font-bold">{c.priority}</span>
-                   </p>
-                </div>
-
-                {/* Status Dropdown */}
-                <div className="col-span-6 md:col-span-3">
-                   <select 
-                    value={c.status} 
-                    onChange={(e) => onStatusUpdate(c._id, e.target.value)}
-                    className={`w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-sm font-semibold focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm ${statusInfo.color}`}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="under consideration">Under Consideration</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                </div>
-
-                {/* Desktop View Button */}
-                <button onClick={() => setSelectedComplaint(c)} className="hidden md:flex col-span-1 justify-end items-center text-text-secondary-on-light hover:text-accent font-semibold text-sm transition-colors">
-                  View <ChevronRight size={16} className="ml-1" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+      <div className="mb-6">
+        {controls}
       </div>
+
+      {complaints.length === 0 ? (
+        <div className="text-center py-16 px-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
+          <Inbox size={48} className="mx-auto text-gray-400" />
+          <h2 className="mt-4 text-xl font-semibold text-text-on-light">No Issues Found</h2>
+          <p className="text-text-secondary-on-light mt-2">There are currently no complaints matching your search or filter.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Table Header for Desktop */}
+          <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-sm font-semibold text-text-secondary-on-light border-b border-gray-200">
+            <div className="col-span-4">Title</div>
+            <div className="col-span-2">Category</div>
+            <div className="col-span-2">Priority</div>
+            <div className="col-span-3">Status</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          {/* Complaint Items */}
+          {complaints.map(c => {
+            const statusInfo = getStatusInfo(c.status);
+            return (
+              <div key={c._id} className="bg-white border border-gray-200 rounded-lg transition-shadow hover:shadow-lg hover:border-accent shadow-sm">
+                <div className="grid grid-cols-12 gap-4 items-center p-4">
+                  
+                  {/* Mobile Title & View Button */}
+                  <div className="col-span-11 md:col-span-4 block md:hidden">
+                      <p className="font-bold text-text-on-light">{c.title}</p>
+                      <p className="text-sm text-text-secondary-on-light">{c.category}</p>
+                  </div>
+                   <button onClick={() => setSelectedComplaint(c)} className="col-span-1 flex justify-end items-center md:hidden text-text-secondary-on-light hover:text-accent transition-colors">
+                      <ChevronRight size={20} />
+                  </button>
+
+                  {/* Desktop Title */}
+                  <div className="hidden md:block col-span-4">
+                    <p className="font-bold text-text-on-light truncate">{c.title}</p>
+                  </div>
+
+                  {/* Category */}
+                   <div className="hidden md:block col-span-2">
+                    <p className="text-sm text-text-secondary-on-light">{c.category}</p>
+                  </div>
+                  
+                  {/* Priority */}
+                  <div className="col-span-6 md:col-span-2">
+                     <p className={`inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full ring-1 ring-gray-200 ${statusInfo.color}`}>
+                       <span className="font-bold">{c.priority}</span>
+                     </p>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div className="col-span-6 md:col-span-3">
+                     <select 
+                      value={c.status} 
+                      onChange={(e) => onStatusUpdate(c._id, e.target.value)}
+                      className={`w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-sm font-semibold focus:ring-2 focus:ring-accent focus:outline-none transition-shadow shadow-sm ${statusInfo.color}`}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="under consideration">Under Consideration</option>
+                      <option value="resolved">Resolved</option>
+                    </select>
+                  </div>
+
+                  {/* Desktop View Button */}
+                  <button onClick={() => setSelectedComplaint(c)} className="hidden md:flex col-span-1 justify-end items-center text-text-secondary-on-light hover:text-accent font-semibold text-sm transition-colors">
+                    View <ChevronRight size={16} className="ml-1" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       <ComplaintModal complaint={selectedComplaint} onClose={() => setSelectedComplaint(null)} />
     </>
   );
