@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const categories = [
     'Water Supply & Sewage',
@@ -35,5 +35,4 @@ const ComplaintSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 ComplaintSchema.index({ location: '2dsphere' });
-
-export default mongoose.model('Complaint', ComplaintSchema);
+module.exports = mongoose.model('Complaint', ComplaintSchema);

@@ -1,7 +1,8 @@
-import React from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, ShieldCheck, LayoutDashboard, MapPin, Camera, Send, Droplet, Construction, Trash2, Lightbulb, HeartPulse, AlertOctagon } from 'lucide-react';
+import { ChevronRight, ShieldCheck, LayoutDashboard, MapPin, Camera, Send, Droplet, Construction, Trash2, Lightbulb, HeartPulse, AlertOctagon, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/api'; // Make sure you import your api instance
 
 // Helper component for "How it Works" cards
 const HowItWorksCard = ({ icon, title, description }) => (
@@ -26,6 +27,10 @@ const FeatureCard = ({ icon, title }) => (
 
 const HomePage = () => {
   const { user } = useAuth();
+  const [resolvedCount, setResolvedCount] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const getDashboardPath = () => {
     if (!user) return '/';
@@ -33,6 +38,37 @@ const HomePage = () => {
     if (user.role === 'admin') return '/admin-dashboard';
     return '/citizen-dashboard';
   };
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        // Fetch both sets of data in parallel for efficiency
+        const [complaintsResponse, usersResponse] = await Promise.all([
+          api.get('/stats/getAllComplaints'), // Assuming this endpoint exists and is accessible
+          api.get('/stats/getAllUsers') // Assuming this endpoint exists and is accessible
+        ]);
+
+        // Calculate counts from the response data
+        const resolved = complaintsResponse.data.filter(c => c.status === 'resolved').length;
+        const users = usersResponse.data.filter(u => u.role === 'citizen').length;
+
+        setResolvedCount(resolved);
+        setTotalUsers(users);
+
+      } catch (err) {
+        console.error("Failed to fetch homepage stats:", err);
+        setError('Could not load community statistics.');
+        // Set default values on error
+        setResolvedCount(0);
+        setTotalUsers(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const howItWorksSteps = [
     { icon: <MapPin size={32} />, title: '1. Pinpoint Location', description: 'Use our interactive map to drop a pin on the exact location of the issue.' },
@@ -121,11 +157,15 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 <div>
-                    <p className="text-5xl font-extrabold text-accent">X+</p>
+                    <p className="text-5xl font-extrabold text-accent">
+                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${resolvedCount}+`}
+                    </p>
                     <p className="mt-2 text-lg text-text-secondary">Issues Resolved</p>
                 </div>
                 <div>
-                    <p className="text-5xl font-extrabold text-accent">Y+</p>
+                    <p className="text-5xl font-extrabold text-accent">
+                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${totalUsers}+`}
+                    </p>
                     <p className="mt-2 text-lg text-text-secondary">Active Citizens</p>
                 </div>
                 <div>
@@ -133,6 +173,7 @@ const HomePage = () => {
                     <p className="mt-2 text-lg text-text-secondary">Departments on Board</p>
                 </div>
             </div>
+            {error && <p className="text-center text-red-500 mt-4">{error}</p>}
         </div>
       </div>
 

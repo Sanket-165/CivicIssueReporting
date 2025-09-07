@@ -1,7 +1,10 @@
-import Complaint from '../models/Complaint.js';
-import { getPriorityFromDescription } from '../services/geminiService.js';
-import cloudinary from 'cloudinary';
-import streamifier from 'streamifier';
+
+
+const Complaint = require('../models/Complaint');
+const { getPriorityFromDescription } = require('../services/geminiService');
+const cloudinary = require('cloudinary');
+const streamifier = require('streamifier');
+
 
 // This function needs to be configured with your Cloudinary credentials
 cloudinary.v2.config({
@@ -20,7 +23,7 @@ const streamUpload = (buffer, folder, resource_type) => {
     });
 };
 
-export const createComplaint = async (req, res) => {
+exports.createComplaint = async (req, res) => {
     try {
         const { 
             title, 
@@ -68,7 +71,7 @@ export const createComplaint = async (req, res) => {
     }
 };
 
-export const getAllComplaints = async (req, res) => {
+exports.getAllComplaints = async (req, res) => {
     try {
         let query = {};
         if (req.user.role === 'admin') {
@@ -81,7 +84,7 @@ export const getAllComplaints = async (req, res) => {
     }
 };
 
-export const getMyComplaints = async (req, res) => {
+exports.getMyComplaints = async (req, res) => {
     try {
         const complaints = await Complaint.find({ reportedBy: req.user.id }).sort({ createdAt: -1 });
         res.json(complaints);
@@ -90,7 +93,7 @@ export const getMyComplaints = async (req, res) => {
     }
 };
 
-export const updateComplaintStatus = async (req, res) => {
+exports.updateComplaintStatus = async (req, res) => {
     try {
         const { status } = req.body;
         const complaint = await Complaint.findById(req.params.id);
