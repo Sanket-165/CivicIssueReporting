@@ -19,16 +19,9 @@ const ComplaintSchema = new mongoose.Schema({
     voiceNoteUrl: { type: String },
     location: {
         type: { type: String, enum: ['Point'], required: true },
-        coordinates: { type: [Number], required: true }, // [longitude, latitude] - User's live location
+        coordinates: { type: [Number], required: true }, // [longitude, latitude]
     },
-    locationName: { type: String, trim: true },
-    
-    // --- RE-ADDED FIELD TO STORE THE PHOTO'S ACTUAL GEOTAG ---
-    geotag: {
-        latitude: { type: Number },
-        longitude: { type: Number },
-    },
-    
+    locationName: { type: String, trim: true }, // Stores the human-readable address
     status: {
         type: String,
         enum: ['pending', 'under consideration', 'resolved'],
@@ -39,8 +32,8 @@ const ComplaintSchema = new mongoose.Schema({
         enum: ['Low', 'Medium', 'High'],
         default: 'Medium',
     },
+    proofUrl: { type: String }, // URL or path to the proof image
 }, { timestamps: true });
 
 ComplaintSchema.index({ location: '2dsphere' });
-
 module.exports = mongoose.model('Complaint', ComplaintSchema);

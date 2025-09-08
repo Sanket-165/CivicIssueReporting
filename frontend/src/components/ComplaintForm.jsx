@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/api';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
-import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X, Camera } from 'lucide-react';
+import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X } from 'lucide-react';
 
 // Map styles for the light theme (default)
 const mapContainerStyle = {
@@ -167,7 +167,7 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
         formData.append('longitude', markerPosition.lng);
         formData.append('image', image);
         formData.append('category', category);
-        formData.append('locationName', locationName);
+        formData.append('locationName', locationName); // Send the location name
         if (audioBlob) formData.append('voiceNote', audioBlob, 'voice-note.webm');
 
         try {
@@ -266,33 +266,49 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-text-secondary-on-light mb-2">Capture Image*</label>
-                            {!imagePreview ? (
-                                <>
-                                    <label htmlFor="image-capture-input" className="cursor-pointer inline-flex items-center justify-center bg-gray-100 text-accent font-semibold px-6 py-2 rounded-md hover:bg-accent hover:text-white transition-colors duration-300 shadow-sm">
-                                        <Camera size={20} className="mr-2" />
-                                        Capture Image
-                                    </label>
-                                    <input 
-                                        id="image-capture-input" 
-                                        ref={imageInputRef}
-                                        type="file" 
-                                        onChange={handleImageChange} 
-                                        accept="image/*" 
-                                        capture="environment" 
-                                        required 
-                                        className="hidden" 
-                                    />
-                                </>
-                            ) : (
-                                <div className="relative w-full max-w-xs">
-                                    <img src={imagePreview} alt="Complaint preview" className="rounded-md w-full h-auto object-cover shadow-md" />
-                                    <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors">
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+  <label className="block text-sm font-medium text-text-secondary-on-light mb-2">
+    Capture Image*
+  </label>
+
+  {!imagePreview ? (
+    <>
+      <button
+        type="button"
+        onClick={() => imageInputRef.current.click()}
+        className="w-28  bg-accent text-white font-bold py-1 px-1 rounded-md hover:bg-accent-dark transition-colors shadow-md"
+      >
+        Take Photo
+      </button>
+      <input
+        id="image-input"
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageChange}
+        required
+        className="hidden"
+      />
+    </>
+  ) : (
+    <div className="relative w-full max-w-xs">
+      <img
+        src={imagePreview}
+        alt="Complaint preview"
+        className="rounded-md w-full h-auto object-cover shadow-md"
+      />
+      <button
+        type="button"
+        onClick={handleRemoveImage}
+        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black transition-colors"
+      >
+        <X size={16} />
+      </button>
+      <div className='mt-2 text-sm text-gray-700'>Geotag Captured <span>({markerPosition.lat}, {markerPosition.lng})</span></div>
+    </div>
+    
+  )}
+</div>
                         
                         <div>
                            <label className="block text-sm font-medium text-text-secondary-on-light mb-2">Record Voice Note (Optional)</label>
@@ -336,4 +352,3 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
 };
 
 export default ComplaintForm;
-

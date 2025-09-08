@@ -2,7 +2,7 @@ const Complaint = require('../models/Complaint');
 const { getPriorityFromDescription } = require('../services/geminiService');
 const cloudinary = require('cloudinary');
 const streamifier = require('streamifier');
-const exifParser = require('exif-parser'); // Import the new library
+
 
 // This function needs to be configured with your Cloudinary credentials
 cloudinary.v2.config({
@@ -29,7 +29,7 @@ exports.createComplaint = async (req, res) => {
             latitude, 
             longitude, 
             category,
-            locationName
+            locationName // Receive locationName from the form
         } = req.body;
         
         const files = req.files;
@@ -37,34 +37,13 @@ exports.createComplaint = async (req, res) => {
         if (!title || !description || !latitude || !longitude || !category || !files.image) {
             return res.status(400).json({ message: 'Missing required fields or image.' });
         }
-
-        const imageBuffer = files.image[0].buffer;
         
-        // --- NEW: EXIF DATA EXTRACTION ---
-        let geotagData = {};
-        try {
-            const parser = exifParser.create(imageBuffer);
-            const result = parser.parse();
-            if (result.tags && result.tags.GPSLatitude && result.tags.GPSLongitude) {
-                geotagData = {
-                    latitude: result.tags.GPSLatitude,
-                    longitude: result.tags.GPSLongitude,
-                };
-            }
-        } catch (exifError) {
-            console.log('Could not parse EXIF data from image:', exifError.message);
-            // It's not a critical error, just proceed without geotag data
-        }
-        
-        // Upload image to Cloudinary
-        const imageResult = await streamUpload(imageBuffer, 'civic_issues', 'image');
-        
+        const imageResult = await streamUpload(files.image[0].buffer, 'civic_issues', 'image');
         let voiceNoteUrl = '';
         if (files.voiceNote) {
             const voiceResult = await streamUpload(files.voiceNote[0].buffer, 'civic_issues', 'video');
             voiceNoteUrl = voiceResult.secure_url;
         }
-        
         const priority = await getPriorityFromDescription(description);
 
         const complaint = await Complaint.create({
@@ -78,8 +57,7 @@ exports.createComplaint = async (req, res) => {
                 type: 'Point',
                 coordinates: [parseFloat(longitude), parseFloat(latitude)],
             },
-            locationName,
-            geotag: geotagData, // Save the extracted geotag data
+            locationName, // Save the locationName to the database
             reportedBy: req.user.id,
         });
 
@@ -127,4 +105,3 @@ exports.updateComplaintStatus = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
-
