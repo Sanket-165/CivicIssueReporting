@@ -9,6 +9,11 @@ const {
 const { protect, admin } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
+// send proof to user
+const {sendProof} = require("../controllers/feedbackController")
+router.post('/sendProof', protect, admin, upload.single('proof'), sendProof);
+
+
 // Route to create a new complaint (citizen)
 router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNote', maxCount: 1 }]), createComplaint);
 

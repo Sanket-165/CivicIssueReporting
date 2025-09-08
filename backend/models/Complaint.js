@@ -32,6 +32,7 @@ const ComplaintSchema = new mongoose.Schema({
         enum: ['Low', 'Medium', 'High'],
         default: 'Medium',
     },
+    proofUrl: { type: String }, // URL or path to the proof image
 }, { timestamps: true });
 
 ComplaintSchema.index({ location: '2dsphere' });

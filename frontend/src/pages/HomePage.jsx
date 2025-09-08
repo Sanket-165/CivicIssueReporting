@@ -158,13 +158,13 @@ const HomePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 <div>
                     <p className="text-5xl font-extrabold text-accent">
-                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${resolvedCount}+`}
+                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${resolvedCount}`}
                     </p>
                     <p className="mt-2 text-lg text-text-secondary">Issues Resolved</p>
                 </div>
                 <div>
                     <p className="text-5xl font-extrabold text-accent">
-                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${totalUsers}+`}
+                      {loading ? <Loader2 className="h-12 w-12 mx-auto animate-spin" /> : `${totalUsers}`}
                     </p>
                     <p className="mt-2 text-lg text-text-secondary">Active Citizens</p>
                 </div>
