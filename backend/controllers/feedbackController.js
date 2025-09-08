@@ -1,5 +1,4 @@
 const Complaint = require("../models/Complaint")
-const { getPriorityFromDescription } = require('../services/geminiService');
 const cloudinary = require('cloudinary');
 const streamifier = require('streamifier');
 
