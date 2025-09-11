@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../api/api';
 import MapView from './MapView.jsx';
 import ComplaintList from './ComplaintList.jsx';
-import UserManagement from './UserManagement.jsx'; // Import the new component
+import UserManagement from './UserManagement.jsx';
 import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List, Loader, PieChart as PieChartIcon, Filter, Search, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
@@ -27,7 +27,6 @@ const SuperadminDashboard = () => {
 
     const fetchComplaints = useCallback(async () => {
         try {
-            // Only set loading to true for the initial fetch
             if (complaints.length === 0) setLoading(true);
             const { data } = await api.get('/complaints');
             setComplaints(data);
@@ -39,7 +38,6 @@ const SuperadminDashboard = () => {
     }, [complaints.length]);
 
     useEffect(() => {
-        // Fetch complaints only when the complaints view is active
         if (activeView === 'complaints') {
             fetchComplaints();
         }
@@ -80,7 +78,6 @@ const SuperadminDashboard = () => {
       );
     }
     
-    // --- Analytics Data Processing (always uses the full 'complaints' list) ---
     const totalComplaints = complaints.length;
     const pendingCount = complaints.filter(c => c.status === 'pending').length;
     const underConsiderationCount = complaints.filter(c => c.status === 'under consideration').length;
@@ -112,7 +109,6 @@ const SuperadminDashboard = () => {
 
     return (
       <div className="space-y-8">
-        {/* Dashboard Header */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-md">
           <div className="flex items-center gap-4">
             <Shield className="w-10 h-10 text-accent" />
@@ -145,7 +141,6 @@ const SuperadminDashboard = () => {
           </div>
         </div>
 
-        {/* --- View Toggle Tabs --- */}
         <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                 <button
@@ -171,10 +166,8 @@ const SuperadminDashboard = () => {
             </nav>
         </div>
 
-        {/* --- Conditional Content Based on Active View --- */}
         {activeView === 'complaints' && (
             <div className="space-y-8">
-                {/* Analytics Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-md">
                         <div className="flex items-center gap-3 mb-4">
@@ -217,7 +210,6 @@ const SuperadminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Map View Card */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-md">
                   <div className="flex items-center gap-3 mb-4">
                     <MapPin className="text-accent" size={24} />
@@ -228,8 +220,8 @@ const SuperadminDashboard = () => {
                   </div>
                 </div>
                 
-                {/* Complaint List Card */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-md">
+                  {/* ✨ UI Restored to your preferred layout ✨ */}
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
                           <List className="text-accent" size={24} />
@@ -258,7 +250,11 @@ const SuperadminDashboard = () => {
                           </div>
                       </div>
                   </div>
-                  <ComplaintList complaints={filteredComplaints} onStatusUpdate={handleStatusUpdate} />
+                  <ComplaintList 
+                    complaints={filteredComplaints} 
+                    onStatusUpdate={handleStatusUpdate} 
+                    onRefresh={fetchComplaints}
+                  />
                 </div>
             </div>
         )}
@@ -277,4 +273,3 @@ const SuperadminDashboard = () => {
 };
 
 export default SuperadminDashboard;
-

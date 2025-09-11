@@ -20,21 +20,29 @@ const streamUpload = (buffer, folder, resource_type) => {
 
 exports.sendProof = async(req,res) =>{
     try{
-        //Admin sends the proof of resolving the complaint to the user
-        const {complaintId, proof} = req.body;
+        const { complaintId } = req.body;
+
+        // Check if a file was uploaded by the middleware
+        if (!req.file) {
+            return res.status(400).json({ message: "No proof image file was uploaded." });
+        }
+
         const complaint = await Complaint.findById(complaintId);
         if(!complaint){
             return res.status(404).json({message: "Complaint not found"});
         }
-        const files = req.files;
-        const proofResult = await streamUpload(files.buffer, 'civic_issues/proofs', 'image');
+
+        // Use req.file (from upload.single) instead of req.files
+        const proofResult = await streamUpload(req.file.buffer, 'civic_issues/proofs', 'image');
 
         complaint.proofUrl = proofResult.secure_url;
-        complaint.status = "Resolved";
+        complaint.status = "resolved"; // Status is also updated here
         await complaint.save();
+
         res.status(200).json({message: "Proof sent successfully"});
     }
     catch(err){
+        console.error("ERROR UPLOADING PROOF:", err); // Add detailed logging for future errors
         return res.status(500).json({message: "Server Error", error: err.message});
     }   
 }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api/api';
 import ComplaintForm from './ComplaintForm.jsx';
+import ViewProofModal from './ViewProofModal';
 import { useAuth } from '../context/AuthContext';
-import { Plus, List, AlertTriangle, CheckCircle, Clock, Loader } from 'lucide-react'; // Modern icons
+import { Plus, List, AlertTriangle, CheckCircle, Clock, Loader, Eye } from 'lucide-react';
 
-// Skeleton loader for a better UX, adapted for a light theme
 const CitizenDashboardSkeleton = () => (
  <div className="animate-pulse space-y-6">
    <div className="h-10 bg-gray-200 rounded-md w-1/2"></div>
@@ -20,14 +20,13 @@ const CitizenDashboardSkeleton = () => (
  </div>
 );
 
-// A reusable component for displaying each complaint card
-const ComplaintCard = ({ complaint }) => {
+const ComplaintCard = ({ complaint, onViewProof }) => {
  const getStatusInfo = (status) => {
    switch (status) {
      case 'resolved':
        return { icon: <CheckCircle className="text-priority-low" />, color: 'priority-low' };
      case 'under consideration':
-       return { icon: <Loader className="text-priority-medium" />, color: 'priority-medium' };
+       return { icon: <Loader className="text-priority-medium animate-spin" />, color: 'priority-medium' };
      case 'pending':
      default:
        return { icon: <Clock className="text-priority-high" />, color: 'priority-high' };
@@ -53,6 +52,16 @@ const ComplaintCard = ({ complaint }) => {
          </div>
        </div>
        <p className="text-text-secondary-on-light text-sm mt-2">{complaint.description.substring(0, 120)}...</p>
+       {complaint.status === 'resolved' && complaint.proofUrl && (
+          <div className="mt-3">
+            <button
+              onClick={() => onViewProof(complaint.proofUrl)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-accent-dark transition-colors"
+            >
+              <Eye size={16} /> View Resolution Proof
+            </button>
+          </div>
+        )}
      </div>
        <div className="border-t sm:border-t-0 sm:border-l border-gray-200 mt-4 sm:mt-0 sm:ml-4 pt-4 sm:pt-0 sm:pl-4 flex-shrink-0 text-center">
          <p className="text-xs text-text-secondary-on-light">Reported On</p>
@@ -62,12 +71,12 @@ const ComplaintCard = ({ complaint }) => {
  );
 };
 
-
 const CitizenDashboard = () => {
- const [view, setView] = useState('list'); // 'list' or 'form'
+ const [view, setView] = useState('list');
  const [complaints, setComplaints] = useState([]);
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState('');
+ const [viewingProof, setViewingProof] = useState(null);
  const { user } = useAuth();
 
  const fetchComplaints = useCallback(async () => {
@@ -83,12 +92,14 @@ const CitizenDashboard = () => {
  }, []);
 
  useEffect(() => {
-   fetchComplaints();
- }, [fetchComplaints]);
+   if (view === 'list') {
+    fetchComplaints();
+   }
+ }, [view, fetchComplaints]);
 
  const handleComplaintSubmitted = () => {
    fetchComplaints();
-   setView('list'); // Switch back to the list view after submission
+   setView('list');
  };
 
  if (loading) return <CitizenDashboardSkeleton />;
@@ -99,8 +110,6 @@ const CitizenDashboard = () => {
        <h1 className="text-3xl font-bold text-text-on-light">Welcome, {user?.name}!</h1>
        <p className="text-text-secondary-on-light mt-1">Here you can manage your reported issues and submit new ones.</p>
      </div>
-
-     {/* View Toggle Buttons */}
      <div className="flex gap-2 border-b border-gray-200 pb-2">
        <button
          onClick={() => setView('list')}
@@ -115,8 +124,6 @@ const CitizenDashboard = () => {
          <Plus size={16} /> Report New Issue
        </button>
      </div>
-
-     {/* Conditional Content */}
      <div>
        {view === 'form' && <ComplaintForm onComplaintSubmitted={handleComplaintSubmitted} />}
        
@@ -131,7 +138,7 @@ const CitizenDashboard = () => {
            </div>
          ) : complaints.length > 0 ? (
            <div className="space-y-4">
-             {complaints.map(c => <ComplaintCard key={c._id} complaint={c} />)}
+             {complaints.map(c => <ComplaintCard key={c._id} complaint={c} onViewProof={setViewingProof} />)}
            </div>
          ) : (
            <div className="text-center py-16 px-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
@@ -147,6 +154,10 @@ const CitizenDashboard = () => {
          )
        )}
      </div>
+     <ViewProofModal 
+        imageUrl={viewingProof} 
+        onClose={() => setViewingProof(null)} 
+      />
    </div>
  );
 };
