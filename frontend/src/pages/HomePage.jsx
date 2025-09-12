@@ -71,8 +71,8 @@ const HomePage = () => {
   }, []); // Empty dependency array ensures this runs only once on mount
 
   const howItWorksSteps = [
-    { icon: <MapPin size={32} />, title: '1. Pinpoint Location', description: 'Use our interactive map to drop a pin on the exact location of the issue.' },
-    { icon: <Camera size={32} />, title: '2. Capture & Upload', description: 'Snap a geotagged photo and record a voice note to provide clear evidence.' },
+    { icon: <MapPin size={32} />, title: '1. Fetch Location', description: 'Using Geotag fetching the exact location of the issue on our interactive map.' },
+    { icon: <Camera size={32} />, title: '2. Capture  & Upload', description: 'Snap a geotagged photo and record a voice note to provide clear evidence.' },
     { icon: <Send size={32} />, title: '3. Submit & Track', description: 'Your report is sent directly to the relevant department. Track its status in real-time.' },
   ];
 
