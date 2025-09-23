@@ -108,7 +108,8 @@ const ComplaintCard = ({ complaint, onViewProof, onComplaintImage, onRefresh }) 
             case 'pending': default: return { icon: <Clock className="text-red-500" />, color: 'text-red-500' };
         }
     };
-    const statusInfo = getStatusInfo(complaint.status);
+    const displayStatus = complaint.status === 'resolved' && complaint.isFinal ? 'closed' : complaint.status;
+    const statusInfo = getStatusInfo(displayStatus);
 
     const latestFeedback = complaint.feedbackHistory?.length > 0 ? complaint.feedbackHistory[complaint.feedbackHistory.length - 1] : null;
 
@@ -125,7 +126,7 @@ const ComplaintCard = ({ complaint, onViewProof, onComplaintImage, onRefresh }) 
                     </div>
                     <div className={`flex items-center gap-2 text-sm font-medium ${statusInfo.color}`}>
                         {statusInfo.icon}
-                        <span className="capitalize">{complaint.status}</span>
+                        <span className="capitalize">{displayStatus}</span>
                     </div>
                 </div>
                 <p className="text-text-secondary-on-light text-sm mt-2">{complaint.description.substring(0, 120)}...</p>
