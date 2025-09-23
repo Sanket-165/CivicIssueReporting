@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, UploadCloud, Loader2, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const ProofUploadModal = ({ complaint, onClose, onProofSubmit }) => {
   const [proofFile, setProofFile] = useState(null);
@@ -33,8 +34,10 @@ const ProofUploadModal = ({ complaint, onClose, onProofSubmit }) => {
       onClose(); // Close modal on success
     } catch (err) {
       setError(err.message || 'Failed to upload proof. Please try again.');
+      toast.error('Failed to upload proof. Please try again.');
     } finally {
       setLoading(false);
+      toast.success('Proof uploaded successfully!' );
     }
   };
 

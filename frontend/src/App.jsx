@@ -8,6 +8,8 @@ import CitizenDashboard from './components/CitizenDashboard.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import SuperadminDashboard from './components/SuperadminDashboard.jsx';
 import PrivateRoute from './components/PrivateRoute.jsx';
+import { Toaster } from 'react-hot-toast';
+
 
 function App() {
   return (
@@ -35,6 +37,7 @@ function App() {
           <Route path="/superadmin-dashboard" element={<PrivateRoute component={SuperadminDashboard} role="superadmin" />} />
         </Routes>
       </main>
+      <Toaster position="top-center" reverseOrder={false} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, LogIn, Loader2, AlertTriangle, Shield, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -28,8 +29,10 @@ const RegisterPage = () => {
       // On successful registration, AuthContext handles navigation to the citizen dashboard
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register. Please try again.');
+      toast.error('Failed to register. Please try again.');
     } finally {
       setLoading(false);
+      toast.success('Registered successfully!' );
     }
   };
 

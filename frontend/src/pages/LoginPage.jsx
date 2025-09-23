@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, Loader2, AlertTriangle, Shield, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -24,8 +25,10 @@ const LoginPage = () => {
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to log in. Please check your credentials.');
+      toast.error('Failed to log in. Please check your credentials.');
     } finally {
       setLoading(false);
+      toast.success('Logged in successfully!' );
     }
   };
 

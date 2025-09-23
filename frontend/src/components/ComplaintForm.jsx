@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/api';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 import { MapPin, Info, Image as ImageIcon, Mic, StopCircle, AlertTriangle, Loader2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Map styles for the light theme (default)
 const mapContainerStyle = {
@@ -175,8 +176,10 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
             onComplaintSubmitted();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to submit complaint.');
+            toast.error('Failed to submit complaint.');
         } finally {
             setLoading(false);
+            toast.success('Complaint submitted successfully!');
         }
     };
 
