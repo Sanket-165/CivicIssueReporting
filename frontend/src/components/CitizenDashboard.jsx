@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api/api';
 import ComplaintForm from './ComplaintForm.jsx';
 import ViewProofModal from './ViewProofModal';
+import ViewComplaintModal from './ViewComplaintModal.jsx';
 import { useAuth } from '../context/AuthContext';
-import { Plus, List, AlertTriangle, CheckCircle, Clock, Loader, Eye } from 'lucide-react';
+import { Plus, List, AlertTriangle, CheckCircle, Clock, Loader, Eye , Camera} from 'lucide-react';
 
 const CitizenDashboardSkeleton = () => (
  <div className="animate-pulse space-y-6">
@@ -20,7 +21,7 @@ const CitizenDashboardSkeleton = () => (
  </div>
 );
 
-const ComplaintCard = ({ complaint, onViewProof }) => {
+const ComplaintCard = ({ complaint, onViewProof, onComplaintImage }) => {
  const getStatusInfo = (status) => {
    switch (status) {
      case 'resolved':
@@ -37,6 +38,7 @@ const ComplaintCard = ({ complaint, onViewProof }) => {
 
  return (
    <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row gap-4 hover:border-accent transition-all duration-300 shadow-sm hover:shadow-lg">
+     {/* This thumbnail remains hidden on mobile, but visible on larger screens */}
      <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden hidden sm:block">
        <img src={complaint.imageUrl} alt={complaint.title} className="w-full h-full object-cover" />
      </div>
@@ -52,16 +54,28 @@ const ComplaintCard = ({ complaint, onViewProof }) => {
          </div>
        </div>
        <p className="text-text-secondary-on-light text-sm mt-2">{complaint.description.substring(0, 120)}...</p>
-       {complaint.status === 'resolved' && complaint.proofUrl && (
-          <div className="mt-3">
+       
+       {/* Action Buttons Container */}
+       <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-4">
+        
+        {/* ✨ NEW BUTTON: Only visible on mobile (screens smaller than sm) ✨ */}
+        <button
+            onClick={() => onComplaintImage(complaint.imageUrl)}
+            className="inline-flex sm:hidden items-center gap-2 text-sm font-semibold text-accent hover:text-accent-dark transition-colors"
+        >
+            <Camera size={16} /> View Complaint Image
+        </button>
+
+        {/* Existing "View Proof" button */}
+        {complaint.status === 'resolved' && complaint.proofUrl && (
             <button
               onClick={() => onViewProof(complaint.proofUrl)}
               className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-accent-dark transition-colors"
             >
               <Eye size={16} /> View Resolution Proof
             </button>
-          </div>
         )}
+       </div>
      </div>
        <div className="border-t sm:border-t-0 sm:border-l border-gray-200 mt-4 sm:mt-0 sm:ml-4 pt-4 sm:pt-0 sm:pl-4 flex-shrink-0 text-center">
          <p className="text-xs text-text-secondary-on-light">Reported On</p>
@@ -77,6 +91,7 @@ const CitizenDashboard = () => {
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState('');
  const [viewingProof, setViewingProof] = useState(null);
+ const [viewingComplaint, setViewingComplaint] = useState(null);
  const { user } = useAuth();
 
  const fetchComplaints = useCallback(async () => {
@@ -138,7 +153,7 @@ const CitizenDashboard = () => {
            </div>
          ) : complaints.length > 0 ? (
            <div className="space-y-4">
-             {complaints.map(c => <ComplaintCard key={c._id} complaint={c} onViewProof={setViewingProof} />)}
+             {complaints.map(c => <ComplaintCard key={c._id} complaint={c} onViewProof={setViewingProof} onComplaintImage={setViewingComplaint} />)}
            </div>
          ) : (
            <div className="text-center py-16 px-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
@@ -157,6 +172,10 @@ const CitizenDashboard = () => {
      <ViewProofModal 
         imageUrl={viewingProof} 
         onClose={() => setViewingProof(null)} 
+      />
+      <ViewComplaintModal 
+        imageUrl={viewingComplaint} 
+        onClose={() => setViewingComplaint(null)} 
       />
    </div>
  );
