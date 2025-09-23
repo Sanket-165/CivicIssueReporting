@@ -22,7 +22,6 @@ exports.sendProof = async(req,res) =>{
     try{
         const { complaintId } = req.body;
 
-        // Check if a file was uploaded by the middleware
         if (!req.file) {
             return res.status(400).json({ message: "No proof image file was uploaded." });
         }
@@ -32,17 +31,21 @@ exports.sendProof = async(req,res) =>{
             return res.status(404).json({message: "Complaint not found"});
         }
 
-        // Use req.file (from upload.single) instead of req.files
         const proofResult = await streamUpload(req.file.buffer, 'civic_issues/proofs', 'image');
 
-        complaint.proofUrl = proofResult.secure_url;
-        complaint.status = "resolved"; // Status is also updated here
+        // ✨ MODIFIED: Push proof to the feedbackHistory array
+        // This creates a new entry for the citizen to give feedback on.
+        complaint.feedbackHistory.push({ proofUrl: proofResult.secure_url });
+        
+        complaint.status = "resolved";
+        complaint.isFinal = false; // Allow citizen to give feedback on this new resolution
+        
         await complaint.save();
+        
+        res.status(200).json({message: "Proof sent successfully", complaint});
 
-        res.status(200).json({message: "Proof sent successfully"});
-    }
-    catch(err){
-        console.error("ERROR UPLOADING PROOF:", err); // Add detailed logging for future errors
+    } catch(err){
+        console.error("ERROR UPLOADING PROOF:", err);
         return res.status(500).json({message: "Server Error", error: err.message});
     }   
 }

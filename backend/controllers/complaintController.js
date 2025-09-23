@@ -3,8 +3,6 @@ const { getPriorityFromDescription } = require('../services/geminiService');
 const cloudinary = require('cloudinary');
 const streamifier = require('streamifier');
 
-
-// This function needs to be configured with your Cloudinary credentials
 cloudinary.v2.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -23,21 +21,11 @@ const streamUpload = (buffer, folder, resource_type) => {
 
 exports.createComplaint = async (req, res) => {
     try {
-        const { 
-            title, 
-            description, 
-            latitude, 
-            longitude, 
-            category,
-            locationName // Receive locationName from the form
-        } = req.body;
-        
+        const { title, description, latitude, longitude, category, locationName } = req.body;
         const files = req.files;
-
         if (!title || !description || !latitude || !longitude || !category || !files.image) {
             return res.status(400).json({ message: 'Missing required fields or image.' });
         }
-        
         const imageResult = await streamUpload(files.image[0].buffer, 'civic_issues', 'image');
         let voiceNoteUrl = '';
         if (files.voiceNote) {
@@ -45,24 +33,12 @@ exports.createComplaint = async (req, res) => {
             voiceNoteUrl = voiceResult.secure_url;
         }
         const priority = await getPriorityFromDescription(description);
-
         const complaint = await Complaint.create({
-            title,
-            description,
-            category,
-            imageUrl: imageResult.secure_url,
-            voiceNoteUrl,
-            priority,
-            location: {
-                type: 'Point',
-                coordinates: [parseFloat(longitude), parseFloat(latitude)],
-            },
-            locationName, // Save the locationName to the database
-            reportedBy: req.user.id,
+            title, description, category, imageUrl: imageResult.secure_url, voiceNoteUrl, priority,
+            location: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)], },
+            locationName, reportedBy: req.user.id,
         });
-
         res.status(201).json({ success: true, data: complaint });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error during complaint creation.' });
@@ -99,6 +75,83 @@ exports.updateComplaintStatus = async (req, res) => {
             return res.status(404).json({ message: 'Complaint not found' });
         }
         complaint.status = status;
+        await complaint.save();
+        res.json(complaint);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// --- ✨ NEW and MODIFIED CONTROLLER FUNCTIONS ---
+
+exports.addFeedbackAndReopen = async (req, res) => {
+    try {
+        const { rating, comment, wantsToReopen } = req.body;
+        const complaint = await Complaint.findById(req.params.id);
+
+        if (!complaint || complaint.reportedBy.toString() !== req.user.id) {
+            return res.status(404).json({ message: 'Complaint not found or not authorized' });
+        }
+
+        const latestFeedbackEntry = complaint.feedbackHistory[complaint.feedbackHistory.length - 1];
+        if (latestFeedbackEntry) {
+            latestFeedbackEntry.rating = rating;
+            latestFeedbackEntry.comment = comment;
+        } else {
+             // This case shouldn't happen if proof is sent first, but as a fallback:
+            complaint.feedbackHistory.push({ rating, comment });
+        }
+        
+        if (wantsToReopen) {
+            complaint.status = 'reopened';
+        } else {
+            complaint.isFinal = true;
+            complaint.status = 'closed';
+        }
+        
+        await complaint.save();
+        res.json(complaint);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+exports.closeComplaint = async (req, res) => {
+    try {
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint || complaint.reportedBy.toString() !== req.user.id) {
+            return res.status(404).json({ message: 'Complaint not found or not authorized' });
+        }
+        complaint.isFinal = true;
+        complaint.status = 'closed';
+        await complaint.save();
+        res.json(complaint);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+exports.forwardComplaint = async (req, res) => {
+    try {
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+        
+        complaint.status = 'reassigned';
+        await complaint.save();
+        res.json(complaint);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+exports.rejectComplaint = async (req, res) => {
+    try {
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+        
+        complaint.status = 'resolved';
+        complaint.isFinal = true;
         await complaint.save();
         res.json(complaint);
     } catch (error) {

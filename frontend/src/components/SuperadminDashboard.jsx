@@ -3,10 +3,9 @@ import api from '../api/api';
 import MapView from './MapView.jsx';
 import ComplaintList from './ComplaintList.jsx';
 import UserManagement from './UserManagement.jsx';
-import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List, Loader, PieChart as PieChartIcon, Filter, Search, Users } from 'lucide-react';
+import { Shield, BarChart2, CheckCircle, Clock, AlertTriangle, MapPin, List, Loader, PieChart as PieChartIcon, Filter, Search, Users, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
-// A dedicated skeleton loader for the dashboard
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
     <div className="h-44 bg-white shadow-sm rounded-lg"></div>
@@ -23,11 +22,11 @@ const SuperadminDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [departmentFilter, setDepartmentFilter] = useState('All');
-    const [activeView, setActiveView] = useState('complaints'); // 'complaints' or 'users'
+    const [activeView, setActiveView] = useState('complaints');
 
     const fetchComplaints = useCallback(async () => {
         try {
-            if (complaints.length === 0) setLoading(true);
+            setLoading(true);
             const { data } = await api.get('/complaints');
             setComplaints(data);
         } catch (err) {
@@ -35,13 +34,11 @@ const SuperadminDashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [complaints.length]);
+    }, []);
 
     useEffect(() => {
-        if (activeView === 'complaints') {
-            fetchComplaints();
-        }
-    }, [fetchComplaints, activeView]);
+        fetchComplaints();
+    }, [fetchComplaints]);
     
     const handleStatusUpdate = async (id, status) => {
         try {
@@ -53,8 +50,11 @@ const SuperadminDashboard = () => {
         }
     };
     
-    const filteredComplaints = useMemo(() => {
-        return complaints
+    const reopenedComplaints = useMemo(() => complaints.filter(c => c.status === 'reopened'), [complaints]);
+    const regularComplaints = useMemo(() => complaints.filter(c => c.status !== 'reopened' && c.status !== 'reassigned'), [complaints]);
+
+    const filteredRegularComplaints = useMemo(() => {
+        return regularComplaints
           .filter(c => departmentFilter === 'All' || c.category === departmentFilter)
           .filter(c => statusFilter === 'All' || c.status === statusFilter)
           .filter(c => {
@@ -64,7 +64,7 @@ const SuperadminDashboard = () => {
               (c.reportedBy?.name && c.reportedBy.name.toLowerCase().includes(term))
             );
           });
-    }, [complaints, searchTerm, statusFilter, departmentFilter]);
+    }, [regularComplaints, searchTerm, statusFilter, departmentFilter]);
 
     if (loading) return <DashboardSkeleton />;
 
@@ -82,13 +82,16 @@ const SuperadminDashboard = () => {
     const pendingCount = complaints.filter(c => c.status === 'pending').length;
     const underConsiderationCount = complaints.filter(c => c.status === 'under consideration').length;
     const resolvedCount = complaints.filter(c => c.status === 'resolved').length;
+    const reopenedCount = reopenedComplaints.length;
 
     const departmentData = complaints.reduce((acc, complaint) => {
         const dept = complaint.category;
         if (!acc[dept]) {
             acc[dept] = { pending: 0, 'under consideration': 0, resolved: 0 };
         }
-        acc[dept][complaint.status]++;
+        if (['pending', 'under consideration', 'resolved'].includes(complaint.status)) {
+           acc[dept][complaint.status]++;
+        }
         return acc;
     }, {});
     const barChartData = Object.keys(departmentData).map(dept => ({
@@ -117,7 +120,7 @@ const SuperadminDashboard = () => {
               <p className="text-text-secondary-on-light">Global overview of all reported civic issues.</p>
             </div>
           </div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             <div className="bg-gray-100 p-4 rounded-md border border-gray-200">
               <BarChart2 className="mx-auto text-gray-500" size={24} />
               <p className="text-2xl font-bold text-text-on-light mt-2">{totalComplaints}</p>
@@ -138,30 +141,25 @@ const SuperadminDashboard = () => {
               <p className="text-2xl font-bold text-text-on-light mt-2">{resolvedCount}</p>
               <p className="text-sm text-text-secondary-on-light">Resolved</p>
             </div>
+            <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+              <RefreshCw className="mx-auto text-yellow-500" size={24} />
+              <p className="text-2xl font-bold text-text-on-light mt-2">{reopenedCount}</p>
+              <p className="text-sm text-text-secondary-on-light">Reopened</p>
+            </div>
           </div>
         </div>
 
         <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                <button
-                    onClick={() => setActiveView('complaints')}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                        activeView === 'complaints'
-                        ? 'border-accent text-accent'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
+                <button onClick={() => setActiveView('complaints')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeView === 'complaints' ? 'border-accent text-accent' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                     <List size={16} /> Complaint Management
                 </button>
-                <button
-                    onClick={() => setActiveView('users')}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                        activeView === 'users'
-                        ? 'border-accent text-accent'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
+                <button onClick={() => setActiveView('users')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeView === 'users' ? 'border-accent text-accent' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                     <Users size={16} /> User Management
+                </button>
+                <button onClick={() => setActiveView('reopened')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeView === 'reopened' ? 'border-accent text-accent' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                    <RefreshCw size={16} /> Reopened Issues
+                    {reopenedCount > 0 && <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{reopenedCount}</span>}
                 </button>
             </nav>
         </div>
@@ -216,12 +214,11 @@ const SuperadminDashboard = () => {
                     <h2 className="text-xl font-semibold text-text-on-light">Report Locations</h2>
                   </div>
                   <div className="h-96 md:h-[500px] w-full rounded-md overflow-hidden">
-                    <MapView complaints={filteredComplaints} colorBy="category" />
+                    <MapView complaints={filteredRegularComplaints} colorBy="category" />
                   </div>
                 </div>
                 
                 <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-md">
-                  {/* ✨ UI Restored to your preferred layout ✨ */}
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
                           <List className="text-accent" size={24} />
@@ -251,7 +248,7 @@ const SuperadminDashboard = () => {
                       </div>
                   </div>
                   <ComplaintList 
-                    complaints={filteredComplaints} 
+                    complaints={filteredRegularComplaints} 
                     onStatusUpdate={handleStatusUpdate} 
                     onRefresh={fetchComplaints}
                   />
@@ -266,6 +263,20 @@ const SuperadminDashboard = () => {
                     <h2 className="text-xl font-semibold text-text-on-light">Manage Users</h2>
                 </div>
                 <UserManagement />
+            </div>
+        )}
+
+        {activeView === 'reopened' && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-md">
+                <div className="flex items-center gap-3 mb-4">
+                    <RefreshCw className="text-accent" size={24} />
+                    <h2 className="text-xl font-semibold text-text-on-light">Reopened Complaint Queue</h2>
+                </div>
+                <ComplaintList 
+                    complaints={reopenedComplaints} 
+                    onStatusUpdate={handleStatusUpdate} 
+                    onRefresh={fetchComplaints}
+                />
             </div>
         )}
       </div>

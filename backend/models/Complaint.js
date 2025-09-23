@@ -10,6 +10,14 @@ const categories = [
     'Other'
 ];
 
+// ✨ NEW: Sub-schema for feedback history
+const FeedbackSchema = new mongoose.Schema({
+    rating: { type: Number, min: 1, max: 5 },
+    comment: { type: String, trim: true },
+    proofUrl: { type: String }, // The proof associated with this resolution attempt
+    feedbackAt: { type: Date, default: Date.now }
+});
+
 const ComplaintSchema = new mongoose.Schema({
     reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true, trim: true },
@@ -19,12 +27,12 @@ const ComplaintSchema = new mongoose.Schema({
     voiceNoteUrl: { type: String },
     location: {
         type: { type: String, enum: ['Point'], required: true },
-        coordinates: { type: [Number], required: true }, // [longitude, latitude]
+        coordinates: { type: [Number], required: true },
     },
-    locationName: { type: String, trim: true }, // Stores the human-readable address
+    locationName: { type: String, trim: true },
     status: {
         type: String,
-        enum: ['pending', 'under consideration', 'resolved'],
+        enum: ['pending', 'under consideration', 'resolved', 'reopened', 'reassigned', 'closed'], // ✨ MODIFIED
         default: 'pending',
     },
     priority: {
@@ -32,7 +40,9 @@ const ComplaintSchema = new mongoose.Schema({
         enum: ['Low', 'Medium', 'High'],
         default: 'Medium',
     },
-    proofUrl: { type: String }, // URL or path to the proof image
+    feedbackHistory: [FeedbackSchema], // ✨ NEW: An array to store all feedback rounds
+    isFinal: { type: Boolean, default: false },
+    // ✨ NEW: Flag to permanently close a complaint
 }, { timestamps: true });
 
 ComplaintSchema.index({ location: '2dsphere' });
