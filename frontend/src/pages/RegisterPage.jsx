@@ -32,7 +32,7 @@ const RegisterPage = () => {
       toast.error('Failed to register. Please try again.');
     } finally {
       setLoading(false);
-      toast.success('Registered successfully!' );
+      
     }
   };
 

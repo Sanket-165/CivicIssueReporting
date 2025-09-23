@@ -28,7 +28,7 @@ const LoginPage = () => {
       toast.error('Failed to log in. Please check your credentials.');
     } finally {
       setLoading(false);
-      toast.success('Logged in successfully!' );
+   
     }
   };
 

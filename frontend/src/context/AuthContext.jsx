@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '../api/api';
 
 const AuthContext = createContext();
@@ -48,6 +49,8 @@ export const AuthProvider = ({ children }) => {
       } else {
         navigate('/citizen-dashboard');
       }
+
+      toast.success('Logged in successfully!' );
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -60,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data));
       setUser(data);
       navigate('/citizen-dashboard');
+      toast.success('Registered successfully!' );
     } catch (error) {
         console.error("Registration failed:", error);
         throw error;
@@ -70,6 +74,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     setUser(null);
     navigate('/login');
+    toast.success("Logged out successfully!");
   };
 
   const value = { user, login, logout, register };
