@@ -23,6 +23,7 @@ const LoginPage = () => {
     try {
       await login(email, password);
       navigate(from, { replace: true });
+      toast.success('Logged in successfully!' );
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to log in. Please check your credentials.');
       toast.error('Failed to log in. Please check your credentials.');

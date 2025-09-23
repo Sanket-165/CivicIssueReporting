@@ -26,6 +26,7 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       await register(name, email, password);
+      toast.success('Registered successfully!' );
       // On successful registration, AuthContext handles navigation to the citizen dashboard
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register. Please try again.');

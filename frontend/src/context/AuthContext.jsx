@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
         navigate('/citizen-dashboard');
       }
 
-      toast.success('Logged in successfully!' );
+      
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data));
       setUser(data);
       navigate('/citizen-dashboard');
-      toast.success('Registered successfully!' );
+      
     } catch (error) {
         console.error("Registration failed:", error);
         throw error;
