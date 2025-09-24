@@ -1,51 +1,82 @@
-const User = require('../models/User');
+const { supabase } = require('../config/db');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 };
 
 // @desc    Register a new user
 exports.registerUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const userExists = await User.findOne({ email });
+  const { name, email, password, role, department } = req.body;
+  const userRole = role || 'citizen';  // ✅ safe default
+  
+  try {
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-  if (userExists) {
-    return res.status(400).json({ message: 'User already exists' });
-  }
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-  const user = await User.create({ name, email, password, role });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  if (user) {
+    // Insert new user
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([{ name, email, password: hashedPassword, role: userRole, department }])
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+
     res.status(201).json({
-      _id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      department: user.department,
+      token: generateToken(user.id),
     });
-  } else {
-    res.status(400).json({ message: 'Invalid user data' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
 // @desc    Auth user & get token
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email });
 
-  if (user && (await user.matchPassword(password))) {
-    // The response now includes the department for admins
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid email or password' });
+
     res.status(200).json({
-      _id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      department: user.department, // ✨ NEW: Send department info
-      token: generateToken(user._id),
+      department: user.department,
+      token: generateToken(user.id),
     });
-  } else {
-    res.status(401).json({ message: 'Invalid email or password' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
-

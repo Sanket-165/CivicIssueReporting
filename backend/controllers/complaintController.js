@@ -1,160 +1,207 @@
-const Complaint = require('../models/Complaint');
+const { supabase } = require('../config/db');
 const { getPriorityFromDescription } = require('../services/geminiService');
-const cloudinary = require('cloudinary');
-const streamifier = require('streamifier');
+const { uploadToSupabase } = require('../middleware/uploadMiddleware');
 
-cloudinary.v2.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const streamUpload = (buffer, folder, resource_type) => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.v2.uploader.upload_stream({ folder, resource_type }, (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-        });
-        streamifier.createReadStream(buffer).pipe(stream);
-    });
+// --- Helper: format complaint with feedback ---
+const formatComplaint = async (complaint) => {
+  const { data: feedback } = await supabase
+    .from('feedback_history')
+    .select('*')
+    .eq('complaint_id', complaint.id);
+  return { ...complaint, feedbackHistory: feedback || [] };
 };
 
+
+// --- Create Complaint ---
 exports.createComplaint = async (req, res) => {
-    try {
-        const { title, description, latitude, longitude, category, locationName } = req.body;
-        const files = req.files;
-        if (!title || !description || !latitude || !longitude || !category || !files.image) {
-            return res.status(400).json({ message: 'Missing required fields or image.' });
-        }
-        const imageResult = await streamUpload(files.image[0].buffer, 'civic_issues', 'image');
-        let voiceNoteUrl = '';
-        if (files.voiceNote) {
-            const voiceResult = await streamUpload(files.voiceNote[0].buffer, 'civic_issues', 'video');
-            voiceNoteUrl = voiceResult.secure_url;
-        }
-        const priority = await getPriorityFromDescription(description);
-        const complaint = await Complaint.create({
-            title, description, category, imageUrl: imageResult.secure_url, voiceNoteUrl, priority,
-            location: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)], },
-            locationName, reportedBy: req.user.id,
-        });
-        res.status(201).json({ success: true, data: complaint });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error during complaint creation.' });
+  try {
+
+    console.log("REQ BODY:", req.body);
+    console.log("REQ FILES:", req.files);
+
+    const { title, description, latitude, longitude, category, locationName } = req.body;
+    const files = req.files;
+
+    if (!title || !description || !latitude || !longitude || !category || !files?.image) {
+      return res.status(400).json({ message: 'Missing required fields or image.' });
     }
+
+    // Upload files to Supabase Storage
+    const imageUrl = await uploadToSupabase(files.image[0], 'images');
+    let voiceNoteUrl = '';
+    if (files.voiceNote) {
+      voiceNoteUrl = await uploadToSupabase(files.voiceNote[0], 'voiceNotes');
+    }
+
+    // Compute priority
+    const priority = await getPriorityFromDescription(description);
+
+    // Insert complaint
+    const { data: complaint, error } = await supabase
+      .from('complaints')
+      .insert([{
+        title,
+        description,
+        category,
+        image_url: imageUrl,
+        voice_note_url: voiceNoteUrl,
+        priority,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        location_name: locationName,
+        reported_by: req.user.id,
+        status: 'pending',
+        is_final: false
+      }])
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.status(201).json({ success: true, data: complaint });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error during complaint creation.' });
+  }
 };
 
+// --- Get All Complaints ---
 exports.getAllComplaints = async (req, res) => {
-    try {
-        let query = {};
-        if (req.user.role === 'admin') {
-            query = { category: req.user.department };
-        }
-        const complaints = await Complaint.find(query).populate('reportedBy', 'name email').sort({ createdAt: -1 });
-        res.json(complaints);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+  try {
+    let query = supabase.from('complaints').select('*').order('created_at', { ascending: false });
+
+    if (req.user.role === 'admin') {
+      query = query.eq('category', req.user.department);
     }
+
+    const { data, error } = await query;
+    if (error) return res.status(400).json({ message: error.message });
+
+    const complaintsWithFeedback = await Promise.all(data.map(formatComplaint));
+
+    res.json(complaintsWithFeedback);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
+// --- Get My Complaints ---
 exports.getMyComplaints = async (req, res) => {
-    try {
-        const complaints = await Complaint.find({ reportedBy: req.user.id }).sort({ createdAt: -1 });
-        res.json(complaints);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const { data, error } = await supabase
+      .from('complaints')
+      .select('*')
+      .eq('reported_by', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    const complaintsWithFeedback = await Promise.all(data.map(formatComplaint));
+    res.json(complaintsWithFeedback);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
+// --- Update Complaint Status ---
 exports.updateComplaintStatus = async (req, res) => {
-    try {
-        const { status } = req.body;
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) {
-            return res.status(404).json({ message: 'Complaint not found' });
-        }
-        complaint.status = status;
-        await complaint.save();
-        res.json(complaint);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const { status } = req.body;
+    const { data: complaint, error } = await supabase
+      .from('complaints')
+      .update({ status })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error || !complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+    res.json(complaint);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
-// --- ✨ NEW and MODIFIED CONTROLLER FUNCTIONS ---
-
+// --- Add Feedback & Reopen ---
 exports.addFeedbackAndReopen = async (req, res) => {
-    try {
-        const { rating, comment, wantsToReopen } = req.body;
-        const complaint = await Complaint.findById(req.params.id);
+  try {
+    const { rating, comment, wantsToReopen } = req.body;
+    const complaintId = req.params.id;
 
-        if (!complaint || complaint.reportedBy.toString() !== req.user.id) {
-            return res.status(404).json({ message: 'Complaint not found or not authorized' });
-        }
+    // Insert feedback
+    const { data: feedback, error: feedbackError } = await supabase
+      .from('feedback_history')
+      .insert([{ complaint_id: complaintId, rating, comment }])
+      .select()
+      .single();
 
-        const latestFeedbackEntry = complaint.feedbackHistory[complaint.feedbackHistory.length - 1];
-        if (latestFeedbackEntry) {
-            latestFeedbackEntry.rating = rating;
-            latestFeedbackEntry.comment = comment;
-        } else {
-             // This case shouldn't happen if proof is sent first, but as a fallback:
-            complaint.feedbackHistory.push({ rating, comment });
-        }
-        
-        if (wantsToReopen) {
-            complaint.status = 'reopened';
-        } else {
-            complaint.isFinal = true;
-            complaint.status = 'closed';
-        }
-        
-        await complaint.save();
-        res.json(complaint);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
+    if (feedbackError) return res.status(400).json({ message: feedbackError.message });
+
+    // Optionally reopen complaint
+    if (wantsToReopen) {
+      await supabase.from('complaints').update({ status: 'reopened' }).eq('id', complaintId);
+    } else {
+      await supabase.from('complaints').update({ status: 'closed', is_final: true }).eq('id', complaintId);
     }
+
+    res.json(feedback);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
+// --- Close Complaint ---
 exports.closeComplaint = async (req, res) => {
-    try {
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint || complaint.reportedBy.toString() !== req.user.id) {
-            return res.status(404).json({ message: 'Complaint not found or not authorized' });
-        }
-        complaint.isFinal = true;
-        complaint.status = 'closed';
-        await complaint.save();
-        res.json(complaint);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const complaintId = req.params.id;
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'closed', is_final: true })
+      .eq('id', complaintId)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
+// --- Forward Complaint ---
 exports.forwardComplaint = async (req, res) => {
-    try {
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-        
-        complaint.status = 'reassigned';
-        await complaint.save();
-        res.json(complaint);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const { department } = req.body;
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'under consideration', department })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
+// --- Reject Complaint ---
 exports.rejectComplaint = async (req, res) => {
-    try {
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-        
-        complaint.status = 'resolved';
-        complaint.isFinal = true;
-        await complaint.save();
-        res.json(complaint);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'closed', is_final: true })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };

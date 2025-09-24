@@ -1,46 +1,223 @@
 const express = require('express');
 const router = express.Router();
-const {
-  createComplaint,
-  getAllComplaints,
-  getMyComplaints,
-  updateComplaintStatus,
-  addFeedbackAndReopen, // ✨ RENAMED/MODIFIED
-  forwardComplaint,     // ✨ NEW
-  rejectComplaint,      // ✨ NEW
-  closeComplaint,       // ✨ NEW
-} = require('../controllers/complaintController');
+const { supabase } = require('../config/db');
 const { protect, admin } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
 
-// send proof to user
-const {sendProof} = require("../controllers/feedbackController")
-router.post('/sendProof', protect, admin, upload.single('proof'), sendProof);
+// Helper: format complaint with feedback
+const formatComplaint = async (complaint) => {
+  const { data: feedback, error } = await supabase
+    .from('feedback_history')
+    .select('*')
+    .eq('complaint_id', complaint.id);
 
-// Route to create a new complaint (citizen)
-router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNote', maxCount: 1 }]), createComplaint);
+  if (error) console.error(error);
+  return { ...complaint, feedbackHistory: feedback || [] };
+};
 
-// Route to get all complaints (admin)
+// @desc    Create a new complaint
+// @route   POST /api/complaints
+// @access  Protected (citizen)
+const createComplaint = async (req, res) => {
+  try {
+    const { title, description, category, locationName, latitude, longitude } = req.body;
+
+    // For file uploads
+    const imageUrl = req.files?.image?.[0]?.path || null;
+    const voiceNoteUrl = req.files?.voiceNote?.[0]?.path || null;
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .insert([{
+        reported_by: req.user.id,
+        title,
+        description,
+        category,
+        image_url: imageUrl,
+        voice_note_url: voiceNoteUrl,
+        latitude,
+        longitude,
+        location_name: locationName,
+        status: 'pending',
+        priority: 'Medium',
+        is_final: false
+      }])
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.status(201).json({ complaint: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Get all complaints (admin)
+// @route   GET /api/complaints
+// @access  Protected (admin)
+const getAllComplaints = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('complaints')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    const complaintsWithFeedback = await Promise.all(data.map(formatComplaint));
+
+    res.json({ complaints: complaintsWithFeedback });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Get complaints for logged-in user
+// @route   GET /api/complaints/mycomplaints
+// @access  Protected (citizen)
+const getMyComplaints = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('complaints')
+      .select('*')
+      .eq('reported_by', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    const complaintsWithFeedback = await Promise.all(data.map(formatComplaint));
+
+    res.json({ complaints: complaintsWithFeedback });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Update complaint status (admin)
+// @route   PUT /api/complaints/:id/status
+// @access  Protected (admin)
+const updateComplaintStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, priority } = req.body;
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status, priority })
+      .eq('id', id)
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json({ complaint: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Add feedback and optionally reopen a complaint
+// @route   POST /api/complaints/:id/feedback
+// @access  Protected (citizen)
+const addFeedbackAndReopen = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment, reopen } = req.body;
+    const proofUrl = req.file?.path || null;
+
+    // Insert feedback
+    const { data, error } = await supabase
+      .from('feedback_history')
+      .insert([{ complaint_id: id, rating, comment, proof_url: proofUrl }])
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    // Optionally reopen complaint
+    if (reopen) {
+      await supabase
+        .from('complaints')
+        .update({ status: 'reopened' })
+        .eq('id', id);
+    }
+
+    res.json({ feedback: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Close complaint permanently
+// @route   PUT /api/complaints/:id/close
+// @access  Protected (citizen)
+const closeComplaint = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'closed', is_final: true })
+      .eq('id', id)
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json({ complaint: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Forward complaint (superadmin)
+// @route   PUT /api/complaints/:id/forward
+// @access  Protected (superadmin)
+const forwardComplaint = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { department } = req.body;
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'under consideration', department })
+      .eq('id', id)
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json({ complaint: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Reject complaint (superadmin)
+// @route   PUT /api/complaints/:id/reject
+// @access  Protected (superadmin)
+const rejectComplaint = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ status: 'closed', is_final: true })
+      .eq('id', id)
+      .select();
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json({ complaint: data[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Routes
+router.post('/', protect, createComplaint);
 router.get('/', protect, admin, getAllComplaints);
-
-// Route to get complaints for the logged-in user (citizen)
 router.get('/mycomplaints', protect, getMyComplaints);
-
-// Route to update a complaint's status (admin)
 router.put('/:id/status', protect, admin, updateComplaintStatus);
-
-// --- ✨ NEW Feedback and Reconsideration Routes ---
-
-// Route for a citizen to submit feedback and potentially reopen an issue
 router.post('/:id/feedback', protect, addFeedbackAndReopen);
-
-// Route for a citizen to permanently close an issue after positive feedback
 router.put('/:id/close', protect, closeComplaint);
-
-// Route for a superadmin to accept and forward a reopened complaint
-router.put('/:id/forward', protect, admin, forwardComplaint); // Assuming admin middleware checks for superadmin role
-
-// Route for a superadmin to reject a reopened complaint
-router.put('/:id/reject', protect, admin, rejectComplaint); // Assuming admin middleware checks for superadmin role
+router.put('/:id/forward', protect, admin, forwardComplaint);
+router.put('/:id/reject', protect, admin, rejectComplaint);
 
 module.exports = router;
+

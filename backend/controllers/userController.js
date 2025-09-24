@@ -1,50 +1,68 @@
-const User = require('../models/User.js');
+const { supabase } = require('../config/db');
 
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Private/Superadmin
 exports.getUsers = async (req, res) => {
-    try {
-        const users = await User.find({}).select('-password'); // Exclude passwords from the result
-        res.json(users);
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).json({ message: 'Server Error' });
-    }
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, department, created_at');
+
+    if (error) return res.status(400).json({ message: error.message });
+
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
 // @desc    Update user role and department
 // @route   PUT /api/users/:id
 // @access  Private/Superadmin
 exports.updateUser = async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
+  try {
+    const { role, department } = req.body;
 
-        if (user) {
-            user.role = req.body.role || user.role;
-            // Only set department if the role is 'admin'
-            if (user.role === 'admin') {
-                user.department = req.body.department || user.department;
-            } else {
-                // If role is changed to something else, remove the department
-                user.department = undefined;
-            }
+    // Fetch the user first
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
 
-            const updatedUser = await user.save();
-            
-            res.json({
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                role: updatedUser.role,
-                department: updatedUser.department,
-            });
-
-        } else {
-            res.status(404).json({ message: 'User not found' });
-        }
-    } catch (error) {
-        console.error('Error updating user:', error);
-        res.status(500).json({ message: 'Server Error' });
+    if (fetchError || !existingUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // Prepare updated fields
+    const updates = { role };
+    if (role === 'admin') {
+      updates.department = department || existingUser.department;
+    } else {
+      updates.department = null; // remove department if not admin
+    }
+
+    // Update user
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (updateError) return res.status(400).json({ message: updateError.message });
+
+    res.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      department: updatedUser.department,
+    });
+  } catch (err) {
+    console.error('Error updating user:', err);
+    res.status(500).json({ message: 'Server Error' });
+  }
 };

@@ -102,12 +102,13 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
     };
     
     const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImage(file);
-            setImagePreview(URL.createObjectURL(file));
-        }
+    const file = e.target.files[0];
+    if (file) {
+        setImage(file); // store File object
+        setImagePreview(URL.createObjectURL(file)); // preview only
+    }
     };
+
 
     const handleRemoveImage = () => {
         setImage(null);
@@ -153,35 +154,55 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!markerPosition || !image || !category || !title || !description) {
-            setError('Please fill out all required fields.');
-            return;
-        }
-        setLoading(true);
-        setError('');
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('latitude', markerPosition.lat);
-        formData.append('longitude', markerPosition.lng);
-        formData.append('image', image);
-        formData.append('category', category);
-        formData.append('locationName', locationName); // Send the location name
-        if (audioBlob) formData.append('voiceNote', audioBlob, 'voice-note.webm');
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-        try {
-            await api.post('/complaints', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            onComplaintSubmitted();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to submit complaint.');
-            toast.error('Failed to submit complaint.');
-        } finally {
-            setLoading(false);
-            toast.success('Complaint submitted successfully!');
-        }
-    };
+  if (!markerPosition || !image || !category || !title || !description) {
+    setError('Please fill out all required fields.');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', description);
+  formData.append('latitude', markerPosition.lat.toString());
+  formData.append('longitude', markerPosition.lng.toString());
+  formData.append('category', category);
+  formData.append('locationName', locationName);
+
+  // Attach image and voice note
+  if (image instanceof File) {
+    formData.append('image', image); // File object
+  }
+  if (audioBlob) {
+    formData.append('voiceNote', audioBlob, 'voice-note.webm'); // Blob
+  }
+
+  try {
+    await api.post('/complaints', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    toast.success('Complaint submitted successfully!');
+    onComplaintSubmitted();
+
+    // Reset form
+    setTitle('');
+    setDescription('');
+    setCategory('');
+    setImage(null);
+    setImagePreview(null);
+    setAudioBlob(null);
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to submit complaint.');
+    toast.error('Failed to submit complaint.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     return (
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 space-y-8 shadow-lg">

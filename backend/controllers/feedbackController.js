@@ -1,51 +1,54 @@
-const Complaint = require("../models/Complaint")
-const cloudinary = require('cloudinary');
-const streamifier = require('streamifier');
+const { supabase } = require('../config/db');
+const { uploadToSupabase } = require('../middleware/uploadMiddleware');
 
-cloudinary.v2.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+exports.sendProof = async (req, res) => {
+  try {
+    const { complaintId } = req.body;
 
-const streamUpload = (buffer, folder, resource_type) => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.v2.uploader.upload_stream({ folder, resource_type }, (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-        });
-        streamifier.createReadStream(buffer).pipe(stream);
+    if (!req.file) {
+      return res.status(400).json({ message: 'No proof file uploaded.' });
+    }
+
+    // Check if complaint exists
+    const { data: complaint, error: complaintError } = await supabase
+      .from('complaints')
+      .select('*')
+      .eq('id', complaintId)
+      .single();
+
+    if (complaintError || !complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    // Upload proof to Supabase Storage
+    const proofUrl = await uploadToSupabase(req.file, 'proofs');
+
+    // Insert new feedback entry with proof
+    const { data: feedback, error: feedbackError } = await supabase
+      .from('feedback_history')
+      .insert([{ complaint_id: complaintId, proof_url: proofUrl }])
+      .select()
+      .single();
+
+    if (feedbackError) return res.status(400).json({ message: feedbackError.message });
+
+    // Update complaint status and allow citizen feedback
+    const { data: updatedComplaint, error: updateError } = await supabase
+      .from('complaints')
+      .update({ status: 'resolved', is_final: false })
+      .eq('id', complaintId)
+      .select()
+      .single();
+
+    if (updateError) return res.status(400).json({ message: updateError.message });
+
+    res.status(200).json({
+      message: 'Proof sent successfully',
+      complaint: updatedComplaint,
+      feedback,
     });
+  } catch (err) {
+    console.error('ERROR UPLOADING PROOF:', err);
+    return res.status(500).json({ message: 'Server Error', error: err.message });
+  }
 };
-
-exports.sendProof = async(req,res) =>{
-    try{
-        const { complaintId } = req.body;
-
-        if (!req.file) {
-            return res.status(400).json({ message: "No proof image file was uploaded." });
-        }
-
-        const complaint = await Complaint.findById(complaintId);
-        if(!complaint){
-            return res.status(404).json({message: "Complaint not found"});
-        }
-
-        const proofResult = await streamUpload(req.file.buffer, 'civic_issues/proofs', 'image');
-
-        // ✨ MODIFIED: Push proof to the feedbackHistory array
-        // This creates a new entry for the citizen to give feedback on.
-        complaint.feedbackHistory.push({ proofUrl: proofResult.secure_url });
-        
-        complaint.status = "resolved";
-        complaint.isFinal = false; // Allow citizen to give feedback on this new resolution
-        
-        await complaint.save();
-        
-        res.status(200).json({message: "Proof sent successfully", complaint});
-
-    } catch(err){
-        console.error("ERROR UPLOADING PROOF:", err);
-        return res.status(500).json({message: "Server Error", error: err.message});
-    }   
-}
