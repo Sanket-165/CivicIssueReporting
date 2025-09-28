@@ -174,12 +174,13 @@ const ComplaintForm = ({ onComplaintSubmitted }) => {
         try {
             await api.post('/complaints', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             onComplaintSubmitted();
+            toast.success('Complaint submitted successfully!');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to submit complaint.');
             toast.error('Failed to submit complaint.');
         } finally {
             setLoading(false);
-            toast.success('Complaint submitted successfully!');
+            
         }
     };
 
